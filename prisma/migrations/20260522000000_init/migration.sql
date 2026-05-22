@@ -21,12 +21,13 @@ CREATE TABLE "Season" (
   "leagueId" TEXT NOT NULL,
   "name" TEXT NOT NULL,
   "startDate" TIMESTAMP(3) NOT NULL,
-  "endDate" TIMESTAMP(3)
+  "endDate" TIMESTAMP(3),
+  UNIQUE("leagueId", "name")
 );
 
 CREATE TABLE "Player" (
   "id" TEXT PRIMARY KEY,
-  "displayName" TEXT NOT NULL
+  "displayName" TEXT NOT NULL UNIQUE
 );
 
 CREATE TABLE "LeaguePlayer" (

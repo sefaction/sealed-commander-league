@@ -39,11 +39,13 @@ model Season {
   endDate     DateTime?
   rounds      Round[]
   memberships LeaguePlayer[]
+
+  @@unique([leagueId, name])
 }
 
 model Player {
   id            String           @id @default(cuid())
-  displayName   String
+  displayName   String           @unique
   memberships   LeaguePlayer[]
   openedCards   CardOwnership[]  @relation("OpenedBy")
   ownedCards    CardOwnership[]  @relation("OwnedBy")

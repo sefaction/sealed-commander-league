@@ -9,22 +9,32 @@ Dockerized Next.js app for tracking a long-form MTG sealed commander league.
 - Docker Compose
 - Local username/password auth
 
-## Quick Start
-1. Copy `.env.example` to `.env` if desired (optional with compose defaults).
-2. Start services:
+## Unraid-first Quick Start
+1. Copy `.env.example` to `.env` and set values.
+2. Recommended defaults avoid your currently-used ports:
+   - `WEB_HOST_PORT=13001`
+   - `POSTGRES_HOST_PORT=15435`
+3. Start services:
    ```bash
-   docker compose up --build
+   docker compose up -d --build
    ```
-3. Open `http://localhost:3000`.
-4. Login with:
+4. Open `http://<unraid-ip>:13001` (or your `WEB_HOST_PORT`).
+5. Login with:
    - username: `admin`
-   - password: value of `SEED_ADMIN_PASSWORD` (default `boxleague123`)
+   - password: value of `SEED_ADMIN_PASSWORD`
 
-## Unraid Notes
-- Add this repo as a custom app or deploy via Compose Manager.
-- Map port `3000` to your preferred host port.
-- Persist postgres volume (`pgdata`) on your array/cache storage.
-- Set `NEXT_PUBLIC_APP_NAME` to customize branding.
+## Environment variables
+See `.env.example` for all settings. Important ones:
+- `DATABASE_URL` should keep host as `postgres` (service name), not localhost.
+- `POSTGRES_DATA_PATH` should be on persistent storage (example: `/mnt/user/appdata/box-league/postgres`).
+- `NEXT_PUBLIC_APP_NAME` controls branding so the app can be renamed later.
+
+## Commands
+```bash
+docker compose up -d --build
+docker compose logs -f web
+docker compose down
+```
 
 ## Milestone 1 Included
 - Base schema and initial migration.
