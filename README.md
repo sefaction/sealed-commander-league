@@ -33,6 +33,7 @@ See `.env.example` for all settings. Important ones:
 - `DATABASE_URL` should keep host as `postgres` (service name), not localhost.
 - `POSTGRES_DATA_PATH` should be on persistent storage (example: `/mnt/user/appdata/box-league/postgres`).
 - `NEXT_PUBLIC_APP_NAME` controls branding so the app can be renamed later.
+- `COOKIE_SECURE` should be `false` for HTTP/LAN access on Unraid; set `true` only behind HTTPS.
 - `GIT_CONTEXT` + `DOCKERFILE_PATH` support remote git build contexts on Unraid.
 
 ## Commands

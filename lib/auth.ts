@@ -10,12 +10,19 @@ export async function login(username: string, password: string) {
   if (!user) return false;
   const ok = await bcrypt.compare(password, user.passwordHash);
   if (!ok) return false;
-  (await cookies()).set(COOKIE_NAME, user.id, { httpOnly: true, sameSite: 'lax', secure: process.env.NODE_ENV === 'production' });
+  const cookieSecure = process.env.COOKIE_SECURE === 'true';
+  (await cookies()).set(COOKIE_NAME, user.id, {
+    httpOnly: true,
+    sameSite: 'lax',
+    secure: cookieSecure,
+    path: '/',
+    maxAge: 60 * 60 * 24 * 30,
+  });
   return true;
 }
 
 export async function logout() {
-  (await cookies()).delete(COOKIE_NAME);
+  (await cookies()).delete({ name: COOKIE_NAME, path: '/' });
 }
 
 export async function requireAuth() {
