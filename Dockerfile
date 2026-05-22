@@ -18,5 +18,6 @@ COPY --from=builder /app/.next ./.next
 COPY --from=builder /app/public ./public
 COPY --from=builder /app/prisma ./prisma
 COPY --from=builder /app/next.config.ts ./next.config.ts
+COPY --from=builder /app/docker-entrypoint.sh ./docker-entrypoint.sh
 EXPOSE 3000
-CMD ["sh", "-c", "npx prisma migrate deploy && npm run prisma:seed && npm run start"]
+CMD ["./docker-entrypoint.sh"]

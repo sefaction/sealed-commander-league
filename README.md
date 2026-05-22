@@ -53,3 +53,9 @@ docker compose down
 - Full CRUD workflows for pulls/inventory/decks/trades/wishlist/points.
 - Trade completion workflow that mutates inventory only on completion.
 - Scryfall-backed card search and metadata persistence in forms.
+
+### Recovering from Prisma P3009 (failed migration marker)
+If `web` is restart-looping with `P3009` for migration `20260522120000_admin_setup`:
+- Default behavior now auto-resolves that failed marker and retries `migrate deploy`.
+- If you explicitly want a clean wipe, set `WIPE_DB_ON_START=true` in `.env` for one startup, then set it back to `false`.
+
