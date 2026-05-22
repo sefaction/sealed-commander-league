@@ -1,0 +1,21 @@
+services:
+  web:
+    build: .
+    ports:
+      - "3000:3000"
+    environment:
+      DATABASE_URL: postgresql://boxleague:boxleague@db:5432/boxleague
+      NEXT_PUBLIC_APP_NAME: Box League
+      SEED_ADMIN_PASSWORD: boxleague123
+    depends_on:
+      - db
+  db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: boxleague
+      POSTGRES_PASSWORD: boxleague
+      POSTGRES_DB: boxleague
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+volumes:
+  pgdata:
