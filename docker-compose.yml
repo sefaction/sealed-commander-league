@@ -14,8 +14,8 @@ services:
 
   web:
     build:
-      context: .
-      dockerfile: Dockerfile
+      context: ${GIT_CONTEXT:-.}
+      dockerfile: ${DOCKERFILE_PATH:-Dockerfile}
     pull_policy: build
     restart: unless-stopped
     environment:

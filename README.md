@@ -14,12 +14,16 @@ Dockerized Next.js app for tracking a long-form MTG sealed commander league.
 2. Recommended defaults avoid your currently-used ports:
    - `WEB_HOST_PORT=13001`
    - `POSTGRES_HOST_PORT=15435`
-3. Start services:
+3. If deploying through Unraid **Stack/Compose Manager** with a git repository, set:
+   - `GIT_CONTEXT` to your repo URL (for example `https://github.com/<you>/<repo>.git#main`)
+   - `DOCKERFILE_PATH=Dockerfile`
+4. Start services:
    ```bash
    docker compose up -d --build
    ```
-4. Open `http://<unraid-ip>:13001` (or your `WEB_HOST_PORT`).
-5. Login with:
+5. Open from another device using your Unraid LAN IP, **not localhost**:
+   - `http://192.168.1.2:13001` (or `http://<your-unraid-ip>:<WEB_HOST_PORT>`)
+6. Login with:
    - username: `admin`
    - password: value of `SEED_ADMIN_PASSWORD`
 
@@ -28,6 +32,7 @@ See `.env.example` for all settings. Important ones:
 - `DATABASE_URL` should keep host as `postgres` (service name), not localhost.
 - `POSTGRES_DATA_PATH` should be on persistent storage (example: `/mnt/user/appdata/box-league/postgres`).
 - `NEXT_PUBLIC_APP_NAME` controls branding so the app can be renamed later.
+- `GIT_CONTEXT` + `DOCKERFILE_PATH` support remote git build contexts on Unraid.
 
 ## Commands
 ```bash
