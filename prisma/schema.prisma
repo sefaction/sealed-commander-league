@@ -1,0 +1,111 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum TradeStatus {
+  PENDING
+  COMPLETED
+  CANCELED
+}
+
+model User {
+  id           String   @id @default(cuid())
+  username     String   @unique
+  passwordHash String
+  playerId     String?
+  player       Player?  @relation(fields: [playerId], references: [id])
+  createdAt    DateTime @default(now())
+}
+
+model League {
+  id        String   @id @default(cuid())
+  name      String
+  slug      String   @unique
+  seasons   Season[]
+  createdAt DateTime @default(now())
+}
+
+model Season {
+  id          String       @id @default(cuid())
+  leagueId    String
+  league      League       @relation(fields: [leagueId], references: [id])
+  name        String
+  startDate   DateTime
+  endDate     DateTime?
+  rounds      Round[]
+  memberships LeaguePlayer[]
+
+  @@unique([leagueId, name])
+}
+
+model Player {
+  id            String           @id @default(cuid())
+  displayName   String           @unique
+  memberships   LeaguePlayer[]
+  openedCards   CardOwnership[]  @relation("OpenedBy")
+  ownedCards    CardOwnership[]  @relation("OwnedBy")
+  users         User[]
+  pointEvents   PointEvent[]
+}
+
+model LeaguePlayer {
+  id       String @id @default(cuid())
+  seasonId String
+  playerId String
+  season   Season @relation(fields: [seasonId], references: [id])
+  player   Player @relation(fields: [playerId], references: [id])
+  @@unique([seasonId, playerId])
+}
+
+model Round {
+  id        String   @id @default(cuid())
+  seasonId  String
+  season    Season   @relation(fields: [seasonId], references: [id])
+  month     Int
+  year      Int
+  label     String
+  points    PointEvent[]
+  createdAt DateTime @default(now())
+  @@unique([seasonId, month, year])
+}
+
+model Card {
+  id              String   @id @default(cuid())
+  scryfallId      String   @unique
+  name            String
+  manaCost        String?
+  colorIdentity   String[]
+  typeLine        String
+  oracleText      String?
+  setCode         String
+  collectorNumber String
+  rarity          String
+  imageUri        String?
+  ownerships      CardOwnership[]
+}
+
+model CardOwnership {
+  id              String   @id @default(cuid())
+  cardId          String
+  originalOpenerId String
+  currentOwnerId  String
+  quantity        Int      @default(1)
+  card            Card     @relation(fields: [cardId], references: [id])
+  originalOpener  Player   @relation("OpenedBy", fields: [originalOpenerId], references: [id])
+  currentOwner    Player   @relation("OwnedBy", fields: [currentOwnerId], references: [id])
+}
+
+model PointEvent {
+  id          String   @id @default(cuid())
+  roundId     String
+  playerId    String
+  description String
+  points      Int
+  round       Round    @relation(fields: [roundId], references: [id])
+  player      Player   @relation(fields: [playerId], references: [id])
+}
