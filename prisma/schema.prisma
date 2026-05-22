@@ -49,6 +49,8 @@ model Player {
   memberships   LeaguePlayer[]
   openedCards   CardOwnership[]  @relation("OpenedBy")
   ownedCards    CardOwnership[]  @relation("OwnedBy")
+  users         User[]
+  pointEvents   PointEvent[]
 }
 
 model LeaguePlayer {
