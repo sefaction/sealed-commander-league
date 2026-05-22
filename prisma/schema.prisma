@@ -13,6 +13,12 @@ enum TradeStatus {
   CANCELED
 }
 
+enum RoundStatus {
+  PLANNED
+  ACTIVE
+  COMPLETED
+}
+
 model User {
   id           String   @id @default(cuid())
   username     String   @unique
@@ -23,11 +29,13 @@ model User {
 }
 
 model League {
-  id        String   @id @default(cuid())
-  name      String
-  slug      String   @unique
-  seasons   Season[]
-  createdAt DateTime @default(now())
+  id             String   @id @default(cuid())
+  name           String
+  slug           String   @unique
+  description    String?
+  appDisplayName String   @default("Box League")
+  seasons        Season[]
+  createdAt      DateTime @default(now())
 }
 
 model Season {
@@ -35,8 +43,10 @@ model Season {
   leagueId    String
   league      League       @relation(fields: [leagueId], references: [id])
   name        String
+  year        Int
   startDate   DateTime
   endDate     DateTime?
+  active      Boolean      @default(false)
   rounds      Round[]
   memberships LeaguePlayer[]
 
@@ -45,12 +55,18 @@ model Season {
 
 model Player {
   id            String           @id @default(cuid())
+  name          String           @unique
   displayName   String           @unique
+  email         String?
+  active        Boolean          @default(true)
+  isAdmin       Boolean          @default(false)
   memberships   LeaguePlayer[]
   openedCards   CardOwnership[]  @relation("OpenedBy")
   ownedCards    CardOwnership[]  @relation("OwnedBy")
   users         User[]
   pointEvents   PointEvent[]
+  packAllocations PackAllocation[]
+  ownedBoxes    SetBox[]         @relation("BoxOwner")
 }
 
 model LeaguePlayer {
@@ -63,15 +79,53 @@ model LeaguePlayer {
 }
 
 model Round {
-  id        String   @id @default(cuid())
-  seasonId  String
-  season    Season   @relation(fields: [seasonId], references: [id])
-  month     Int
-  year      Int
-  label     String
-  points    PointEvent[]
-  createdAt DateTime @default(now())
-  @@unique([seasonId, month, year])
+  id              String   @id @default(cuid())
+  seasonId         String
+  season           Season   @relation(fields: [seasonId], references: [id])
+  name             String
+  monthNumber      Int
+  startDate        DateTime
+  endDate          DateTime?
+  status           RoundStatus @default(PLANNED)
+  points           PointEvent[]
+  setBoxes         SetBox[]
+  packAllocations  PackAllocation[]
+  createdAt        DateTime @default(now())
+  @@unique([seasonId, monthNumber])
+}
+
+model SetBox {
+  id         String @id @default(cuid())
+  roundId    String
+  round      Round  @relation(fields: [roundId], references: [id])
+  setName    String
+  setCode    String
+  boxType    String
+  boxOwnerId String?
+  boxOwner   Player? @relation("BoxOwner", fields: [boxOwnerId], references: [id])
+  totalPacks Int
+  notes      String?
+}
+
+model PackAllocation {
+  id            String @id @default(cuid())
+  roundId        String
+  round          Round  @relation(fields: [roundId], references: [id])
+  playerId       String
+  player         Player @relation(fields: [playerId], references: [id])
+  packsAssigned  Int
+  packsOpened    Int
+  notes          String?
+
+  @@unique([roundId, playerId])
+}
+
+model PointCategory {
+  id           String @id @default(cuid())
+  name         String @unique
+  description  String?
+  defaultValue Int
+  active       Boolean @default(true)
 }
 
 model Card {
@@ -90,14 +144,14 @@ model Card {
 }
 
 model CardOwnership {
-  id              String   @id @default(cuid())
-  cardId          String
+  id               String   @id @default(cuid())
+  cardId           String
   originalOpenerId String
-  currentOwnerId  String
-  quantity        Int      @default(1)
-  card            Card     @relation(fields: [cardId], references: [id])
-  originalOpener  Player   @relation("OpenedBy", fields: [originalOpenerId], references: [id])
-  currentOwner    Player   @relation("OwnedBy", fields: [currentOwnerId], references: [id])
+  currentOwnerId   String
+  quantity         Int      @default(1)
+  card             Card     @relation(fields: [cardId], references: [id])
+  originalOpener   Player   @relation("OpenedBy", fields: [originalOpenerId], references: [id])
+  currentOwner     Player   @relation("OwnedBy", fields: [currentOwnerId], references: [id])
 }
 
 model PointEvent {

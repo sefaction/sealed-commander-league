@@ -5,7 +5,7 @@ import { prisma } from '@/lib/prisma';
 export default async function Page() {
   await requireAuth();
   const rounds = await prisma.round.findMany({
-    orderBy: [{ year: 'desc' }, { month: 'desc' }],
+    orderBy: [{ monthNumber: 'desc' }],
     include: { season: { include: { league: true } } },
   });
 
@@ -17,8 +17,8 @@ export default async function Page() {
       <ul className="space-y-2">
         {rounds.map((round) => (
           <li key={round.id} className="rounded border border-zinc-800 p-3">
-            <p className="font-semibold">{round.label}</p>
-            <p className="text-sm text-zinc-400">{round.season.league.name} • {round.season.name} • {round.month}/{round.year}</p>
+            <p className="font-semibold">{round.name}</p>
+            <p className="text-sm text-zinc-400">{round.season.league.name} • {round.season.name} • Month {round.monthNumber}</p>
           </li>
         ))}
       </ul>
