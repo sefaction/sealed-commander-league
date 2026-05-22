@@ -14,8 +14,8 @@ services:
 
   web:
     build:
-      context: ${GIT_CONTEXT:-.}
-      dockerfile: ${DOCKERFILE_PATH:-Dockerfile}
+      context: ${GIT_CONTEXT:-https://github.com/sefaction/sealed-commander-league.git#main}
+      dockerfile: ${DOCKERFILE_PATH:-./Dockerfile}
     pull_policy: build
     restart: unless-stopped
     environment:

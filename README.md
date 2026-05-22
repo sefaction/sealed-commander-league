@@ -15,15 +15,16 @@ Dockerized Next.js app for tracking a long-form MTG sealed commander league.
    - `WEB_HOST_PORT=13001`
    - `POSTGRES_HOST_PORT=15435`
 3. If deploying through Unraid **Stack/Compose Manager** with a git repository, set:
-   - `GIT_CONTEXT` to your repo URL (for example `https://github.com/<you>/<repo>.git#main`)
-   - `DOCKERFILE_PATH=Dockerfile`
+   - `GIT_CONTEXT` to the repo URL containing this `Dockerfile` (default already set in `.env.example`)
+   - `DOCKERFILE_PATH=./Dockerfile`
 4. Start services:
    ```bash
    docker compose up -d --build
    ```
-5. Open from another device using your Unraid LAN IP, **not localhost**:
+5. In Unraid/Portainer, if build fails with `open Dockerfile: no such file or directory`, verify `GIT_CONTEXT` points to the repository root and `DOCKERFILE_PATH=./Dockerfile` (or the real subpath).
+6. Open from another device using your Unraid LAN IP, **not localhost**:
    - `http://192.168.1.2:13001` (or `http://<your-unraid-ip>:<WEB_HOST_PORT>`)
-6. Login with:
+7. Login with:
    - username: `admin`
    - password: value of `SEED_ADMIN_PASSWORD`
 
