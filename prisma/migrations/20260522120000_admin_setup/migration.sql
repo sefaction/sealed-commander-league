@@ -58,7 +58,6 @@ CREATE TABLE IF NOT EXISTS "PointCategory" (
 
 -- CreateIndex
 CREATE UNIQUE INDEX IF NOT EXISTS "Player_name_key" ON "Player"("name");
-CREATE UNIQUE INDEX IF NOT EXISTS "Round_seasonId_monthNumber_key" ON "Round"("seasonId", "monthNumber");
 CREATE UNIQUE INDEX IF NOT EXISTS "PackAllocation_roundId_playerId_key" ON "PackAllocation"("roundId", "playerId");
 CREATE UNIQUE INDEX IF NOT EXISTS "PointCategory_name_key" ON "PointCategory"("name");
 
@@ -79,6 +78,8 @@ WHERE "name" IS NULL OR "monthNumber" IS NULL OR "startDate" IS NULL;
 ALTER TABLE "Round" ALTER COLUMN "name" SET NOT NULL;
 ALTER TABLE "Round" ALTER COLUMN "monthNumber" SET NOT NULL;
 ALTER TABLE "Round" ALTER COLUMN "startDate" SET NOT NULL;
+
+CREATE UNIQUE INDEX IF NOT EXISTS "Round_seasonId_monthNumber_key" ON "Round"("seasonId", "monthNumber");
 
 -- Foreign keys
 DO $$ BEGIN
