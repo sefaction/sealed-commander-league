@@ -21,5 +21,8 @@ else
   echo "[entrypoint] Skipping seed (RUN_SEED_ON_START=false)."
 fi
 
+echo "[entrypoint] Ensuring admin login exists..."
+npm run prisma:bootstrap-admin
+
 echo "[entrypoint] Starting web server..."
 exec npm run start
