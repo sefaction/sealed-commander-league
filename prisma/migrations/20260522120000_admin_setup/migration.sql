@@ -72,12 +72,25 @@ ALTER TABLE "Round" ADD COLUMN IF NOT EXISTS "startDate" TIMESTAMP(3);
 ALTER TABLE "Round" ADD COLUMN IF NOT EXISTS "endDate" TIMESTAMP(3);
 ALTER TABLE "Round" ADD COLUMN IF NOT EXISTS "status" "RoundStatus" NOT NULL DEFAULT 'PLANNED';
 
-UPDATE "Round" SET
-  "name" = COALESCE("name", "label", 'Round'),
-  "monthNumber" = COALESCE("monthNumber", "month", 1),
-  "startDate" = COALESCE("startDate", make_timestamp("year", COALESCE("month",1), 1, 0, 0, 0)),
-  "endDate" = COALESCE("endDate", make_timestamp("year", COALESCE("month",1), 28, 0, 0, 0))
-WHERE "name" IS NULL OR "monthNumber" IS NULL OR "startDate" IS NULL;
+DO $$
+BEGIN
+  IF EXISTS (
+    SELECT 1 FROM information_schema.columns
+    WHERE table_schema = 'public' AND table_name = 'Round' AND column_name = 'label'
+  ) THEN
+    EXECUTE 'UPDATE "Round" SET
+      "name" = COALESCE("name", "label", ''Round''),
+      "monthNumber" = COALESCE("monthNumber", "month", 1),
+      "startDate" = COALESCE("startDate", make_timestamp("year", COALESCE("month",1), 1, 0, 0, 0)),
+      "endDate" = COALESCE("endDate", make_timestamp("year", COALESCE("month",1), 28, 0, 0, 0))
+    WHERE "name" IS NULL OR "monthNumber" IS NULL OR "startDate" IS NULL';
+  ELSE
+    EXECUTE 'UPDATE "Round" SET
+      "name" = COALESCE("name", ''Round''),
+      "monthNumber" = COALESCE("monthNumber", 1)
+    WHERE "name" IS NULL OR "monthNumber" IS NULL';
+  END IF;
+END $$;
 
 ALTER TABLE "Round" ALTER COLUMN "name" SET NOT NULL;
 ALTER TABLE "Round" ALTER COLUMN "monthNumber" SET NOT NULL;

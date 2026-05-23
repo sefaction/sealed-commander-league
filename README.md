@@ -59,3 +59,5 @@ If `web` is restart-looping with `P3009` for migration `20260522120000_admin_set
 - Default behavior now auto-resolves that failed marker and retries `migrate deploy`.
 - If you explicitly want a clean wipe, set `WIPE_DB_ON_START=true` in `.env` for one startup, then set it back to `false`.
 
+
+- `RUN_SEED_ON_START=false` by default so startup does not depend on seed data; set to `true` only when you explicitly want seed inserts.

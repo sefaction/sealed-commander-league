@@ -14,8 +14,12 @@ else
   npx prisma migrate deploy
 fi
 
-echo "[entrypoint] Seeding..."
-npm run prisma:seed
+if [ "${RUN_SEED_ON_START:-false}" = "true" ]; then
+  echo "[entrypoint] Seeding..."
+  npm run prisma:seed
+else
+  echo "[entrypoint] Skipping seed (RUN_SEED_ON_START=false)."
+fi
 
 echo "[entrypoint] Starting web server..."
 exec npm run start
