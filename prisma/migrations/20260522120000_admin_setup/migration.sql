@@ -1,5 +1,9 @@
--- CreateEnum
-CREATE TYPE "RoundStatus" AS ENUM ('PLANNED', 'ACTIVE', 'COMPLETED');
+-- CreateEnum (idempotent for partially-applied migration retries)
+DO $$ BEGIN
+  CREATE TYPE "RoundStatus" AS ENUM ('PLANNED', 'ACTIVE', 'COMPLETED');
+EXCEPTION
+  WHEN duplicate_object THEN NULL;
+END $$;
 
 -- AlterTable
 ALTER TABLE "League"
