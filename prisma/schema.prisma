@@ -54,19 +54,22 @@ model Season {
 }
 
 model Player {
-  id            String           @id @default(cuid())
-  name          String           @unique
-  displayName   String           @unique
-  email         String?
-  active        Boolean          @default(true)
-  isAdmin       Boolean          @default(false)
-  memberships   LeaguePlayer[]
-  openedCards   CardOwnership[]  @relation("OpenedBy")
-  ownedCards    CardOwnership[]  @relation("OwnedBy")
-  users         User[]
-  pointEvents   PointEvent[]
+  id              String           @id @default(cuid())
+  name            String           @unique
+  displayName     String           @unique
+  email           String?
+  active          Boolean          @default(true)
+  isAdmin         Boolean          @default(false)
+  memberships     LeaguePlayer[]
+  openedCards     CardOwnership[]  @relation("OpenedBy")
+  ownedCards      CardOwnership[]  @relation("OwnedBy")
+  users           User[]
+  pointEvents     PointEvent[]
   packAllocations PackAllocation[]
-  ownedBoxes    SetBox[]         @relation("BoxOwner")
+  ownedBoxes      SetBox[]         @relation("BoxOwner")
+  pulls           Pull[]
+  inventoryOwned  InventoryItem[]  @relation("InventoryCurrentOwner")
+  inventoryOpened InventoryItem[]  @relation("InventoryOriginalOpener")
 }
 
 model LeaguePlayer {
@@ -79,18 +82,20 @@ model LeaguePlayer {
 }
 
 model Round {
-  id              String   @id @default(cuid())
-  seasonId         String
-  season           Season   @relation(fields: [seasonId], references: [id])
-  name             String
-  monthNumber      Int
-  startDate        DateTime
-  endDate          DateTime?
-  status           RoundStatus @default(PLANNED)
-  points           PointEvent[]
-  setBoxes         SetBox[]
-  packAllocations  PackAllocation[]
-  createdAt        DateTime @default(now())
+  id             String   @id @default(cuid())
+  seasonId       String
+  season         Season   @relation(fields: [seasonId], references: [id])
+  name           String
+  monthNumber    Int
+  startDate      DateTime
+  endDate        DateTime?
+  status         RoundStatus @default(PLANNED)
+  points         PointEvent[]
+  setBoxes       SetBox[]
+  packAllocations PackAllocation[]
+  pulls          Pull[]
+  inventoryItems InventoryItem[]
+  createdAt      DateTime @default(now())
   @@unique([seasonId, monthNumber])
 }
 
@@ -131,16 +136,61 @@ model PointCategory {
 model Card {
   id              String   @id @default(cuid())
   scryfallId      String   @unique
+  oracleId        String?
   name            String
   manaCost        String?
+  cmc             Float?
+  colors          String[]
   colorIdentity   String[]
   typeLine        String
   oracleText      String?
   setCode         String
+  setName         String?
   collectorNumber String
   rarity          String
   imageUri        String?
+  imageUris       Json?
   ownerships      CardOwnership[]
+  pulls           Pull[]
+  inventoryItems  InventoryItem[]
+}
+
+model Pull {
+  id         String   @id @default(cuid())
+  roundId     String
+  round       Round    @relation(fields: [roundId], references: [id])
+  playerId    String
+  player      Player   @relation(fields: [playerId], references: [id])
+  cardId      String
+  card        Card     @relation(fields: [cardId], references: [id])
+  quantity    Int
+  foil        Boolean  @default(false)
+  condition   String
+  notes       String?
+  createdAt   DateTime @default(now())
+  inventoryItems InventoryItem[]
+}
+
+model InventoryItem {
+  id               String   @id @default(cuid())
+  currentOwnerId   String
+  currentOwner     Player   @relation("InventoryCurrentOwner", fields: [currentOwnerId], references: [id])
+  originalOpenerId String
+  originalOpener   Player   @relation("InventoryOriginalOpener", fields: [originalOpenerId], references: [id])
+  cardId           String
+  card             Card     @relation(fields: [cardId], references: [id])
+  quantity         Int
+  foil             Boolean  @default(false)
+  condition        String
+  acquiredFromPullId String?
+  acquiredFromPull Pull?    @relation(fields: [acquiredFromPullId], references: [id])
+  roundId          String
+  round            Round    @relation(fields: [roundId], references: [id])
+  notes            String?
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  @@unique([currentOwnerId, originalOpenerId, cardId, foil, condition, roundId])
 }
 
 model CardOwnership {
