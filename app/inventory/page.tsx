@@ -15,12 +15,13 @@ export default async function InventoryPage({ searchParams }: { searchParams: Pr
   if (p.roundId) where.roundId = p.roundId;
   if (p.set) where.card = { ...(where.card || {}), setCode: p.set.toLowerCase() };
   if (p.rarity) where.card = { ...(where.card || {}), rarity: p.rarity };
-  if (p.colorIdentity) where.card = { ...(where.card || {}), colorIdentity: { string_contains: p.colorIdentity } };
   if (p.foil === 'true') where.foil = true;
   if (p.foil === 'false') where.foil = false;
-  if (p.keyword) where.card = { ...(where.card || {}), keywords: { string_contains: p.keyword } };
   if (p.manaValueMin || p.manaValueMax) where.card = { ...(where.card || {}), manaValue: { gte: p.manaValueMin ? Number(p.manaValueMin) : undefined, lte: p.manaValueMax ? Number(p.manaValueMax) : undefined } };
-  if (p.priceMin || p.priceMax) where.card = { ...(where.card || {}), AND: [p.priceMin ? { prices: { path: ['usd'], gte: p.priceMin } } : {}, p.priceMax ? { prices: { path: ['usd'], lte: p.priceMax } } : {}] };
+  const colorIdentityNeedle = p.colorIdentity?.trim().toUpperCase();
+  const keywordNeedle = p.keyword?.trim().toLowerCase();
+  const priceMin = p.priceMin ? Number(p.priceMin) : undefined;
+  const priceMax = p.priceMax ? Number(p.priceMax) : undefined;
 
   const [items, players, rounds] = await Promise.all([
     prisma.inventoryItem.findMany({ where, include: { card: true, currentOwner: true, originalOpener: true, round: true }, orderBy: { createdAt: 'desc' } }),
@@ -54,7 +55,23 @@ export default async function InventoryPage({ searchParams }: { searchParams: Pr
     keywords: Array.isArray(i.card.keywords) ? i.card.keywords.join(', ') : JSON.stringify(i.card.keywords ?? ''),
     notes: i.notes ?? '',
     imageUri: i.card.imageUri ?? '',
-  }));
+  })).filter((row) => {
+    if (colorIdentityNeedle) {
+      const colorHaystack = row.colorIdentity.toUpperCase();
+      if (!colorHaystack.includes(colorIdentityNeedle)) return false;
+    }
+
+    if (keywordNeedle) {
+      const keywordHaystack = row.keywords.toLowerCase();
+      if (!keywordHaystack.includes(keywordNeedle)) return false;
+    }
+
+    const usdPrice = row.priceUsd ? Number(row.priceUsd) : undefined;
+    if (priceMin !== undefined && (usdPrice === undefined || Number.isNaN(usdPrice) || usdPrice < priceMin)) return false;
+    if (priceMax !== undefined && (usdPrice === undefined || Number.isNaN(usdPrice) || usdPrice > priceMax)) return false;
+
+    return true;
+  });
 
   return <main className="p-8 space-y-4"><Nav /><h1 className="text-3xl font-bold">Inventory Browser</h1>
     <details open className="border border-zinc-800 rounded p-3"><summary className="cursor-pointer font-semibold">Advanced Filters</summary>
