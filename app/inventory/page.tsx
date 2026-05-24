@@ -1,70 +1,82 @@
 import { requireAuth } from '@/lib/auth';
 import { Nav } from '@/components/Nav';
 import { prisma } from '@/lib/prisma';
+import { InventoryBrowser } from '@/components/InventoryBrowser';
 
 export default async function InventoryPage({ searchParams }: { searchParams: Promise<Record<string, string | undefined>> }) {
   await requireAuth();
-  const params = await searchParams;
-
+  const p = await searchParams;
   const where: any = {};
-  if (params.ownerId) where.currentOwnerId = params.ownerId;
-  if (params.roundId) where.roundId = params.roundId;
-  if (params.setCode) where.card = { ...(where.card || {}), setCode: params.setCode.toLowerCase() };
-  if (params.rarity) where.card = { ...(where.card || {}), rarity: params.rarity };
-  if (params.type) where.card = { ...(where.card || {}), typeLine: { contains: params.type, mode: 'insensitive' } };
-  if (params.color) where.card = { ...(where.card || {}), colorIdentity: { has: params.color } };
-  if (params.q) where.card = { ...(where.card || {}), name: { contains: params.q, mode: 'insensitive' } };
+  if (p.cardName) where.card = { ...(where.card || {}), name: { contains: p.cardName, mode: 'insensitive' } };
+  if (p.oracleText) where.card = { ...(where.card || {}), oracleText: { contains: p.oracleText, mode: 'insensitive' } };
+  if (p.typeLine) where.card = { ...(where.card || {}), typeLine: { contains: p.typeLine, mode: 'insensitive' } };
+  if (p.ownerId) where.currentOwnerId = p.ownerId;
+  if (p.originalOpenerId) where.originalOpenerId = p.originalOpenerId;
+  if (p.roundId) where.roundId = p.roundId;
+  if (p.set) where.card = { ...(where.card || {}), setCode: p.set.toLowerCase() };
+  if (p.rarity) where.card = { ...(where.card || {}), rarity: p.rarity };
+  if (p.colorIdentity) where.card = { ...(where.card || {}), colorIdentity: { string_contains: p.colorIdentity } };
+  if (p.foil === 'true') where.foil = true;
+  if (p.foil === 'false') where.foil = false;
+  if (p.keyword) where.card = { ...(where.card || {}), keywords: { string_contains: p.keyword } };
+  if (p.manaValueMin || p.manaValueMax) where.card = { ...(where.card || {}), manaValue: { gte: p.manaValueMin ? Number(p.manaValueMin) : undefined, lte: p.manaValueMax ? Number(p.manaValueMax) : undefined } };
+  if (p.priceMin || p.priceMax) where.card = { ...(where.card || {}), AND: [p.priceMin ? { prices: { path: ['usd'], gte: p.priceMin } } : {}, p.priceMax ? { prices: { path: ['usd'], lte: p.priceMax } } : {}] };
 
   const [items, players, rounds] = await Promise.all([
-    prisma.inventoryItem.findMany({ where, include: { card: true, currentOwner: true, originalOpener: true, round: true }, orderBy: { createdAt: 'desc' }, take: 200 }),
+    prisma.inventoryItem.findMany({ where, include: { card: true, currentOwner: true, originalOpener: true, round: true }, orderBy: { createdAt: 'desc' } }),
     prisma.player.findMany({ orderBy: { displayName: 'asc' } }),
     prisma.round.findMany({ orderBy: { startDate: 'desc' } }),
   ]);
 
-  const selected = params.itemId ? items.find(i => i.id === params.itemId) ?? await prisma.inventoryItem.findUnique({ where: { id: params.itemId }, include: { card: true, currentOwner: true, originalOpener: true, round: true } }) : null;
+  const rows = items.map(i => ({
+    id: i.id,
+    cardName: i.card.name,
+    quantity: i.quantity,
+    currentOwner: i.currentOwner.displayName,
+    originalOpener: i.originalOpener.displayName,
+    setCode: i.card.setCode.toUpperCase(),
+    setName: i.card.setName ?? '',
+    rarity: i.card.rarity,
+    manaCost: i.card.manaCost ?? '',
+    manaValue: i.card.manaValue ?? undefined,
+    typeLine: i.card.typeLine,
+    colorIdentity: Array.isArray(i.card.colorIdentity) ? i.card.colorIdentity.join(',') : JSON.stringify(i.card.colorIdentity ?? ''),
+    colors: Array.isArray(i.card.colors) ? i.card.colors.join(',') : JSON.stringify(i.card.colors ?? ''),
+    priceUsd: (i.card.prices as any)?.usd ?? '',
+    priceUsdFoil: (i.card.prices as any)?.usd_foil ?? '',
+    foil: i.foil,
+    roundOpened: i.round.name,
+    oracleText: i.card.oracleText ?? '',
+    powerToughness: [i.card.power, i.card.toughness].filter(Boolean).join('/'),
+    legalities: (i.card.legalities as any) ?? {},
+    artist: i.card.artist ?? '',
+    collectorNumber: i.card.collectorNumber,
+    keywords: Array.isArray(i.card.keywords) ? i.card.keywords.join(', ') : JSON.stringify(i.card.keywords ?? ''),
+    notes: i.notes ?? '',
+    imageUri: i.card.imageUri ?? '',
+  }));
 
-  return (
-    <main className="p-8 space-y-4">
-      <Nav />
-      <h1 className="text-3xl font-bold">Inventory</h1>
-      <form className="flex flex-wrap gap-2" method="get">
-        <input name="q" defaultValue={params.q} placeholder="Search card name" className="border p-2 bg-zinc-900" />
-        <select name="ownerId" defaultValue={params.ownerId} className="border p-2 bg-zinc-900"><option value="">All owners</option>{players.map(p => <option key={p.id} value={p.id}>{p.displayName}</option>)}</select>
-        <select name="roundId" defaultValue={params.roundId} className="border p-2 bg-zinc-900"><option value="">All rounds</option>{rounds.map(r => <option key={r.id} value={r.id}>{r.name}</option>)}</select>
-        <input name="setCode" defaultValue={params.setCode} placeholder="Set" className="border p-2 bg-zinc-900 w-24" />
-        <input name="rarity" defaultValue={params.rarity} placeholder="Rarity" className="border p-2 bg-zinc-900 w-24" />
-        <input name="type" defaultValue={params.type} placeholder="Type" className="border p-2 bg-zinc-900 w-32" />
-        <input name="color" defaultValue={params.color} placeholder="Color (W/U/B/R/G)" className="border p-2 bg-zinc-900 w-40" />
-        <button className="border px-3">Filter</button>
+  return <main className="p-8 space-y-4"><Nav /><h1 className="text-3xl font-bold">Inventory Browser</h1>
+    <details open className="border border-zinc-800 rounded p-3"><summary className="cursor-pointer font-semibold">Advanced Filters</summary>
+      <form className="grid grid-cols-2 md:grid-cols-4 gap-2 mt-3">
+        <input name="cardName" defaultValue={p.cardName} placeholder="card name contains" className="border p-2 bg-zinc-900" />
+        <input name="oracleText" defaultValue={p.oracleText} placeholder="oracle text contains" className="border p-2 bg-zinc-900" />
+        <input name="typeLine" defaultValue={p.typeLine} placeholder="type line contains" className="border p-2 bg-zinc-900" />
+        <select name="ownerId" defaultValue={p.ownerId} className="border p-2 bg-zinc-900"><option value="">current owner</option>{players.map(pl => <option key={pl.id} value={pl.id}>{pl.displayName}</option>)}</select>
+        <select name="originalOpenerId" defaultValue={p.originalOpenerId} className="border p-2 bg-zinc-900"><option value="">original opener</option>{players.map(pl => <option key={pl.id} value={pl.id}>{pl.displayName}</option>)}</select>
+        <select name="roundId" defaultValue={p.roundId} className="border p-2 bg-zinc-900"><option value="">round opened</option>{rounds.map(r => <option key={r.id} value={r.id}>{r.name}</option>)}</select>
+        <input name="set" defaultValue={p.set} placeholder="set" className="border p-2 bg-zinc-900" />
+        <input name="rarity" defaultValue={p.rarity} placeholder="rarity" className="border p-2 bg-zinc-900" />
+        <input name="colorIdentity" defaultValue={p.colorIdentity} placeholder="color identity" className="border p-2 bg-zinc-900" />
+        <input name="manaValueMin" defaultValue={p.manaValueMin} placeholder="mana value min" className="border p-2 bg-zinc-900" />
+        <input name="manaValueMax" defaultValue={p.manaValueMax} placeholder="mana value max" className="border p-2 bg-zinc-900" />
+        <input name="keyword" defaultValue={p.keyword} placeholder="keyword contains" className="border p-2 bg-zinc-900" />
+        <select name="foil" defaultValue={p.foil} className="border p-2 bg-zinc-900"><option value="">foil/nonfoil</option><option value="true">foil</option><option value="false">nonfoil</option></select>
+        <input name="priceMin" defaultValue={p.priceMin} placeholder="price min" className="border p-2 bg-zinc-900" />
+        <input name="priceMax" defaultValue={p.priceMax} placeholder="price max" className="border p-2 bg-zinc-900" />
+        <div className="col-span-2 flex gap-2"><button className="border px-3">Apply</button><a href="/inventory" className="border px-3 py-2">Clear Filters</a></div>
       </form>
-
-      <div className="overflow-x-auto">
-        <table className="w-full text-sm border border-zinc-800">
-          <thead><tr className="text-left border-b border-zinc-800"><th className="p-2">Card</th><th className="p-2">Set</th><th className="p-2">Rarity</th><th className="p-2">Qty</th><th className="p-2">Foil</th><th className="p-2">Owner</th><th className="p-2">Original Opener</th><th className="p-2">Round</th></tr></thead>
-          <tbody>
-            {items.map(i => <tr key={i.id} className="border-b border-zinc-800">
-              <td className="p-2"><a href={`/inventory?${new URLSearchParams({ ...Object.fromEntries(Object.entries(params).filter(([,v])=>v)), itemId: i.id }).toString()}`} className="text-sky-400 underline">{i.card.name}</a></td>
-              <td className="p-2">{i.card.setCode.toUpperCase()}</td>
-              <td className="p-2">{i.card.rarity}</td>
-              <td className="p-2">{i.quantity}</td>
-              <td className="p-2">{i.foil ? 'Yes' : 'No'}</td>
-              <td className="p-2">{i.currentOwner.displayName}</td>
-              <td className="p-2">{i.originalOpener.displayName}</td>
-              <td className="p-2">{i.round.name}</td>
-            </tr>)}
-          </tbody>
-        </table>
-      </div>
-
-      {selected && <section className="border border-zinc-700 rounded p-4 space-y-2">
-        <h2 className="text-xl font-semibold">{selected.card.name}</h2>
-        {selected.card.imageUri && <img src={selected.card.imageUri} alt={selected.card.name} className="h-64" />}
-        <p className="text-zinc-300">{selected.card.typeLine}</p>
-        <p className="text-zinc-300 whitespace-pre-wrap">{selected.card.oracleText}</p>
-        <p>Owner: <strong>{selected.currentOwner.displayName}</strong> • Original Opener: <strong>{selected.originalOpener.displayName}</strong></p>
-        <p>Opened in: <strong>{selected.round.name}</strong></p>
-        <p>History: <em>placeholder</em></p>
-      </section>}
-    </main>
-  );
+    </details>
+    <InventoryBrowser rows={rows} />
+  </main>;
 }

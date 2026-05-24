@@ -139,17 +139,28 @@ model Card {
   oracleId        String?
   name            String
   manaCost        String?
-  cmc             Float?
-  colors          String[]
-  colorIdentity   String[]
+  manaValue       Float?
+  power           String?
+  toughness       String?
+  loyalty         String?
+  defense         String?
+  colors          Json?
+  colorIdentity   Json?
   typeLine        String
   oracleText      String?
   setCode         String
+  keywords        Json?
+  legalities      Json?
   setName         String?
   collectorNumber String
   rarity          String
   imageUri        String?
+  artist          String?
   imageUris       Json?
+  prices          Json?
+  purchaseUris    Json?
+  scryfallUri     String?
+  lastSyncedAt    DateTime?
   ownerships      CardOwnership[]
   pulls           Pull[]
   inventoryItems  InventoryItem[]
