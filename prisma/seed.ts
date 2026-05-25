@@ -25,10 +25,10 @@ async function hasTable(table: string) {
 
 async function main() {
   const playersData = [
-    { name: 'brian', displayName: 'Brian', isAdmin: true },
-    { name: 'john-mark', displayName: 'John-Mark', isAdmin: false },
-    { name: 'jessi', displayName: 'Jessi', isAdmin: false },
-    { name: 'heather', displayName: 'Heather', isAdmin: false },
+    { name: 'brian', displayName: 'Brian', isAdmin: true, color: '#3b82f6' },
+    { name: 'john-mark', displayName: 'John-Mark', isAdmin: false, color: '#ef4444' },
+    { name: 'jessi', displayName: 'Jessi', isAdmin: false, color: '#22c55e' },
+    { name: 'heather', displayName: 'Heather', isAdmin: false, color: '#a855f7' },
   ];
 
   const supportsPlayerName = await hasColumn('Player', 'name');
@@ -41,7 +41,7 @@ async function main() {
     if (supportsPlayerName) {
       return prisma.player.upsert({
         where: { name: p.name },
-        update: { displayName: p.displayName, isAdmin: p.isAdmin, active: true },
+        update: { displayName: p.displayName, isAdmin: p.isAdmin, active: true, color: p.color },
         create: { ...p, active: true },
       });
     }

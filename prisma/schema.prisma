@@ -60,6 +60,7 @@ model Player {
   email           String?
   active          Boolean          @default(true)
   isAdmin         Boolean          @default(false)
+  color           String           @default("#64748b")
   memberships     LeaguePlayer[]
   openedCards     CardOwnership[]  @relation("OpenedBy")
   ownedCards      CardOwnership[]  @relation("OwnedBy")

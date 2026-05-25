@@ -34,6 +34,7 @@ export default async function InventoryPage({ searchParams }: { searchParams: Pr
     cardName: i.card.name,
     quantity: i.quantity,
     currentOwner: i.currentOwner.displayName,
+    currentOwnerColor: i.currentOwner.color || '#64748b',
     originalOpener: i.originalOpener.displayName,
     setCode: i.card.setCode.toUpperCase(),
     setName: i.card.setName ?? '',
