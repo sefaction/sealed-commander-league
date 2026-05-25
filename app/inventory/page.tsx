@@ -68,9 +68,9 @@ export default async function InventoryPage({ searchParams }: { searchParams: Pr
           scryfallId: cardData.id, oracleId: cardData.oracle_id ?? null, name: cardData.name, manaCost: cardData.mana_cost ?? null, manaValue: cardData.cmc,
           colors: cardData.colors ?? [], colorIdentity: cardData.color_identity ?? [], typeLine: cardData.type_line, oracleText: cardData.oracle_text ?? null,
           power: cardData.power ?? null, toughness: cardData.toughness ?? null, loyalty: cardData.loyalty ?? null, defense: cardData.defense ?? null,
-          keywords: cardData.keywords ?? null, legalities: cardData.legalities ?? null, setCode: cardData.set, setName: cardData.set_name,
+          keywords: cardData.keywords ?? [], legalities: cardData.legalities ?? {}, setCode: cardData.set, setName: cardData.set_name,
           collectorNumber: cardData.collector_number, rarity: cardData.rarity, artist: cardData.artist ?? null, imageUri: cardData.image_uris?.normal ?? null,
-          imageUris: cardData.image_uris ?? null, prices: cardData.prices ?? null, purchaseUris: cardData.purchase_uris ?? null, scryfallUri: cardData.scryfall_uri ?? null, lastSyncedAt: new Date(),
+          imageUris: cardData.image_uris ?? {}, prices: cardData.prices ?? {}, purchaseUris: cardData.purchase_uris ?? {}, scryfallUri: cardData.scryfall_uri ?? null, lastSyncedAt: new Date(),
         } });
         cardId = created.id;
       }
