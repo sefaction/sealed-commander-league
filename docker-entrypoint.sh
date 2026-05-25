@@ -7,10 +7,10 @@ if [ "${WIPE_DB_ON_START:-false}" = "true" ]; then
   echo "[entrypoint] WIPE_DB_ON_START=true -> resetting database (destructive)."
   npx prisma migrate reset --force --skip-generate
 else
-  if [ "${AUTO_RESOLVE_FAILED_MIGRATION:-true}" = "true" ]; then
-    # Helps recover from P3009 when a previous migration attempt is marked failed.
-    npx prisma migrate resolve --rolled-back 20260522120000_admin_setup >/dev/null 2>&1 || true
-  fi
+  # Always attempt to clear known failed markers from iterative dev migrations.
+  # Safe no-op when they are not in failed state.
+  npx prisma migrate resolve --rolled-back 20260522120000_admin_setup >/dev/null 2>&1 || true
+  npx prisma migrate resolve --rolled-back 20260524140000_card_json_column_type_compat >/dev/null 2>&1 || true
   npx prisma migrate deploy
 fi
 

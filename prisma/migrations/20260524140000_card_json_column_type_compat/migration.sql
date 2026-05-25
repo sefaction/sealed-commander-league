@@ -12,6 +12,7 @@ BEGIN
       AND data_type = 'ARRAY'
       AND udt_name = '_text'
   ) THEN
+    ALTER TABLE "Card" ALTER COLUMN "colors" DROP DEFAULT;
     ALTER TABLE "Card"
       ALTER COLUMN "colors" TYPE JSONB
       USING to_jsonb("colors");
@@ -29,6 +30,7 @@ BEGIN
       AND data_type = 'ARRAY'
       AND udt_name = '_text'
   ) THEN
+    ALTER TABLE "Card" ALTER COLUMN "colorIdentity" DROP DEFAULT;
     ALTER TABLE "Card"
       ALTER COLUMN "colorIdentity" TYPE JSONB
       USING to_jsonb("colorIdentity");
