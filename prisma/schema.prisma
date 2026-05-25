@@ -19,6 +19,21 @@ enum RoundStatus {
   COMPLETED
 }
 
+enum FoilStatus {
+  NONFOIL
+  FOIL
+  ETCHED
+}
+
+enum InventorySourceType {
+  PULL
+  TRADE
+  MANUAL
+  CORRECTION
+  PRIZE
+  OTHER
+}
+
 model User {
   id           String   @id @default(cuid())
   username     String   @unique
@@ -26,6 +41,7 @@ model User {
   playerId     String?
   player       Player?  @relation(fields: [playerId], references: [id])
   createdAt    DateTime @default(now())
+  inventoryAuditLogs InventoryAuditLog[]
 }
 
 model League {
@@ -193,6 +209,8 @@ model InventoryItem {
   card             Card     @relation(fields: [cardId], references: [id])
   quantity         Int
   foil             Boolean  @default(false)
+  foilStatus       FoilStatus @default(NONFOIL)
+  sourceType       InventorySourceType @default(PULL)
   condition        String
   acquiredFromPullId String?
   acquiredFromPull Pull?    @relation(fields: [acquiredFromPullId], references: [id])
@@ -201,8 +219,22 @@ model InventoryItem {
   notes            String?
   createdAt        DateTime @default(now())
   updatedAt        DateTime @updatedAt
+  auditLogs        InventoryAuditLog[]
 
   @@unique([currentOwnerId, originalOpenerId, cardId, foil, condition, roundId])
+}
+
+model InventoryAuditLog {
+  id              String   @id @default(cuid())
+  inventoryItemId String
+  inventoryItem   InventoryItem @relation(fields: [inventoryItemId], references: [id])
+  changedByUserId String?
+  changedByUser   User?    @relation(fields: [changedByUserId], references: [id])
+  changeType      String
+  beforeJson      Json
+  afterJson       Json
+  reason          String?
+  createdAt       DateTime @default(now())
 }
 
 model CardOwnership {

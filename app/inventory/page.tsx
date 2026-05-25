@@ -2,9 +2,15 @@ import { requireAuth } from '@/lib/auth';
 import { Nav } from '@/components/Nav';
 import { prisma } from '@/lib/prisma';
 import { InventoryBrowser } from '@/components/InventoryBrowser';
+import { FoilStatus, InventorySourceType } from '@prisma/client';
+import { searchCards, getCardByScryfallId } from '@/lib/scryfall';
+import { revalidatePath } from 'next/cache';
 
 export default async function InventoryPage({ searchParams }: { searchParams: Promise<Record<string, string | undefined>> }) {
-  await requireAuth();
+  const user = await requireAuth();
+  const userWithPlayer = await prisma.user.findUnique({ where: { id: user.id }, include: { player: true } });
+  const isAdmin = Boolean(userWithPlayer?.player?.isAdmin);
+
   const p = await searchParams;
   const where: any = {};
   if (p.cardName) where.card = { ...(where.card || {}), name: { contains: p.cardName, mode: 'insensitive' } };
@@ -24,18 +30,95 @@ export default async function InventoryPage({ searchParams }: { searchParams: Pr
   const priceMax = p.priceMax ? Number(p.priceMax) : undefined;
 
   const [items, players, rounds] = await Promise.all([
-    prisma.inventoryItem.findMany({ where, include: { card: true, currentOwner: true, originalOpener: true, round: true }, orderBy: { createdAt: 'desc' } }),
+    prisma.inventoryItem.findMany({ where, include: { card: true, currentOwner: true, originalOpener: true, round: true, auditLogs: { orderBy: { createdAt: 'desc' }, take: 5 } }, orderBy: { createdAt: 'desc' } }),
     prisma.player.findMany({ orderBy: { displayName: 'asc' } }),
     prisma.round.findMany({ orderBy: { startDate: 'desc' } }),
   ]);
 
+  async function onSearchPrintings(fd: FormData) {
+    'use server';
+    if (!isAdmin) throw new Error('Not authorized');
+    const q = String(fd.get('q') || '');
+    const r = await searchCards(q);
+    return r.slice(0, 20).map((c) => ({ id: c.id, name: c.name, set: c.set, set_name: c.set_name, collector_number: c.collector_number, rarity: c.rarity, image_uris: c.image_uris }));
+  }
+
+  async function onSaveEdit(fd: FormData) {
+    'use server';
+    if (!isAdmin) throw new Error('Not authorized');
+    const inventoryItemId = String(fd.get('inventoryItemId') || '');
+    const quantity = Number(fd.get('quantity'));
+    if (!Number.isInteger(quantity) || quantity <= 0) throw new Error('Quantity must be a positive integer');
+    const currentOwnerId = String(fd.get('currentOwnerId') || '');
+    if (!currentOwnerId) throw new Error('Current owner is required');
+
+    const before = await prisma.inventoryItem.findUnique({ where: { id: inventoryItemId } });
+    if (!before) throw new Error('Inventory item not found');
+
+    let cardId = String(fd.get('existingCardId') || before.cardId);
+    const newScryfallId = String(fd.get('newScryfallId') || '');
+    if (newScryfallId) {
+      const existing = await prisma.card.findUnique({ where: { scryfallId: newScryfallId } });
+      if (existing) {
+        cardId = existing.id;
+      } else {
+        const cardData = await getCardByScryfallId(newScryfallId);
+        if (!cardData) throw new Error('Invalid printing selection');
+        const created = await prisma.card.create({ data: {
+          scryfallId: cardData.id, oracleId: cardData.oracle_id ?? null, name: cardData.name, manaCost: cardData.mana_cost ?? null, manaValue: cardData.cmc,
+          colors: cardData.colors ?? [], colorIdentity: cardData.color_identity ?? [], typeLine: cardData.type_line, oracleText: cardData.oracle_text ?? null,
+          power: cardData.power ?? null, toughness: cardData.toughness ?? null, loyalty: cardData.loyalty ?? null, defense: cardData.defense ?? null,
+          keywords: cardData.keywords ?? null, legalities: cardData.legalities ?? null, setCode: cardData.set, setName: cardData.set_name,
+          collectorNumber: cardData.collector_number, rarity: cardData.rarity, artist: cardData.artist ?? null, imageUri: cardData.image_uris?.normal ?? null,
+          imageUris: cardData.image_uris ?? null, prices: cardData.prices ?? null, purchaseUris: cardData.purchase_uris ?? null, scryfallUri: cardData.scryfall_uri ?? null, lastSyncedAt: new Date(),
+        } });
+        cardId = created.id;
+      }
+    }
+
+    const roundIdRaw = String(fd.get('roundId') || '');
+    const originalOpenerRaw = String(fd.get('originalOpenerId') || '');
+    const foilStatus = String(fd.get('foilStatus') || 'NONFOIL') as FoilStatus;
+
+    const updated = await prisma.inventoryItem.update({
+      where: { id: inventoryItemId },
+      data: {
+        currentOwnerId,
+        originalOpenerId: originalOpenerRaw || before.originalOpenerId,
+        roundId: roundIdRaw || before.roundId,
+        quantity,
+        foilStatus,
+        foil: foilStatus !== FoilStatus.NONFOIL,
+        condition: String(fd.get('condition') || before.condition),
+        notes: String(fd.get('notes') || '') || null,
+        sourceType: String(fd.get('sourceType') || 'CORRECTION') as InventorySourceType,
+        cardId,
+      },
+    });
+
+    await prisma.inventoryAuditLog.create({ data: {
+      inventoryItemId: updated.id,
+      changedByUserId: user.id,
+      changeType: newScryfallId ? 'printing_correction' : 'manual_edit',
+      beforeJson: before as any,
+      afterJson: updated as any,
+      reason: String(fd.get('reason') || '') || null,
+    } });
+
+    revalidatePath('/inventory');
+  }
+
   const rows = items.map(i => ({
     id: i.id,
+    cardId: i.cardId,
     cardName: i.card.name,
     quantity: i.quantity,
+    currentOwnerId: i.currentOwnerId,
     currentOwner: i.currentOwner.displayName,
     currentOwnerColor: i.currentOwner.color || '#64748b',
+    originalOpenerId: i.originalOpenerId,
     originalOpener: i.originalOpener.displayName,
+    roundId: i.roundId,
     setCode: i.card.setCode.toUpperCase(),
     setName: i.card.setName ?? '',
     rarity: i.card.rarity,
@@ -51,6 +134,8 @@ export default async function InventoryPage({ searchParams }: { searchParams: Pr
     priceEurFoil: (i.card.prices as any)?.eur_foil ?? '',
     priceTix: (i.card.prices as any)?.tix ?? '',
     foil: i.foil,
+    foilStatus: i.foilStatus,
+    sourceType: i.sourceType,
     roundOpened: i.round.name,
     oracleText: i.card.oracleText ?? '',
     powerToughness: [i.card.power, i.card.toughness].filter(Boolean).join('/'),
@@ -64,24 +149,22 @@ export default async function InventoryPage({ searchParams }: { searchParams: Pr
     keywords: Array.isArray(i.card.keywords) ? i.card.keywords.join(', ') : JSON.stringify(i.card.keywords ?? ''),
     notes: i.notes ?? '',
     condition: i.condition,
-    imageUri: (i.card.imageUris as any)?.normal ?? (i.card.imageUris as any)?.small ?? (i.card.imageUris as any)?.front ?? i.card.imageUri ?? '',
+    imageUri: (i.card.imageUris as any)?.normal ?? (i.card.imageUris as any)?.small ?? i.card.imageUri ?? '',
     imageSmall: (i.card.imageUris as any)?.small ?? '',
     scryfallUri: i.card.scryfallUri ?? '',
+    auditHistory: i.auditLogs.map(a => ({ id: a.id, changeType: a.changeType, reason: a.reason ?? '', createdAt: a.createdAt.toISOString() })),
   })).filter((row) => {
     if (colorIdentityNeedle) {
       const colorHaystack = row.colorIdentity.toUpperCase();
       if (!colorHaystack.includes(colorIdentityNeedle)) return false;
     }
-
     if (keywordNeedle) {
       const keywordHaystack = row.keywords.toLowerCase();
       if (!keywordHaystack.includes(keywordNeedle)) return false;
     }
-
     const usdPrice = row.priceUsd ? Number(row.priceUsd) : undefined;
     if (priceMin !== undefined && (usdPrice === undefined || Number.isNaN(usdPrice) || usdPrice < priceMin)) return false;
     if (priceMax !== undefined && (usdPrice === undefined || Number.isNaN(usdPrice) || usdPrice > priceMax)) return false;
-
     return true;
   });
 
@@ -106,6 +189,6 @@ export default async function InventoryPage({ searchParams }: { searchParams: Pr
         <div className="col-span-2 flex gap-2"><button className="border px-3">Apply</button><a href="/inventory" className="border px-3 py-2">Clear Filters</a></div>
       </form>
     </details>
-    <InventoryBrowser rows={rows} />
+    <InventoryBrowser rows={rows} players={players.map(p => ({ id: p.id, name: p.displayName, color: p.color }))} rounds={rounds.map(r => ({ id: r.id, name: r.name }))} isAdmin={isAdmin} onSaveEdit={onSaveEdit} onSearchPrintings={onSearchPrintings} />
   </main>;
 }

@@ -1,6 +1,7 @@
 import { requireAuth } from '@/lib/auth';
 import { Nav } from '@/components/Nav';
 import { prisma } from '@/lib/prisma';
+import { FoilStatus, InventorySourceType } from '@prisma/client';
 import { searchCards } from '@/lib/scryfall';
 import { revalidatePath } from 'next/cache';
 
@@ -24,6 +25,7 @@ export default async function PullsPage({ searchParams }: { searchParams: Promis
     const scryfallId = String(fd.get('scryfallId'));
     const quantity = Number(fd.get('quantity'));
     const foil = fd.get('foil') === 'on';
+    const foilStatus = foil ? FoilStatus.FOIL : FoilStatus.NONFOIL;
     const condition = String(fd.get('condition') || 'NM');
     const notes = String(fd.get('notes') || '') || null;
 
@@ -108,10 +110,12 @@ export default async function PullsPage({ searchParams }: { searchParams: Promis
         cardId: card.id,
         quantity,
         foil,
+        foilStatus,
         condition,
         acquiredFromPullId: pull.id,
         roundId,
         notes,
+        sourceType: InventorySourceType.PULL,
       },
     });
 
