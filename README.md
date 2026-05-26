@@ -6,8 +6,6 @@ Dockerized Next.js app for tracking a long-form MTG sealed commander league.
 - Next.js (App Router) + TypeScript
 - PostgreSQL + Prisma
 - Tailwind CSS
-- Docker Compose
-- Local username/password auth
 
 ## Unraid-first Quick Start
 1. Copy `.env.example` to `.env` and set values.
