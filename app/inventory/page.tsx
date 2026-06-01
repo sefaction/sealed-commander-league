@@ -9,7 +9,8 @@ import { revalidatePath } from 'next/cache';
 export default async function InventoryPage({ searchParams }: { searchParams: Promise<Record<string, string | undefined>> }) {
   const user = await requireAuth();
   const userWithPlayer = await prisma.user.findUnique({ where: { id: user.id }, include: { player: true } });
-  const isAdmin = Boolean(userWithPlayer?.player?.isAdmin);
+  const adminUsername = process.env.ADMIN_USERNAME || 'admin';
+  const isAdmin = user.username === adminUsername || Boolean(userWithPlayer?.player?.isAdmin);
 
   const p = await searchParams;
   const where: any = {};

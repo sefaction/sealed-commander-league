@@ -6,6 +6,8 @@ Dockerized Next.js app for tracking a long-form MTG sealed commander league.
 - Next.js (App Router) + TypeScript
 - PostgreSQL + Prisma
 - Tailwind CSS
+- Docker Compose
+- Local username/password auth
 
 ## Unraid-first Quick Start
 1. Copy `.env.example` to `.env` and set values.
@@ -51,3 +53,11 @@ docker compose down
 - Full CRUD workflows for pulls/inventory/decks/trades/wishlist/points.
 - Trade completion workflow that mutates inventory only on completion.
 - Scryfall-backed card search and metadata persistence in forms.
+
+### Recovering from Prisma P3009 (failed migration marker)
+If `web` is restart-looping with `P3009` for migration `20260522120000_admin_setup`:
+- Default behavior now auto-resolves that failed marker and retries `migrate deploy`.
+- If you explicitly want a clean wipe, set `WIPE_DB_ON_START=true` in `.env` for one startup, then set it back to `false`.
+
+
+- `RUN_SEED_ON_START=false` by default so startup does not depend on seed data; set to `true` only when you explicitly want seed inserts.
