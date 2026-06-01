@@ -31,9 +31,24 @@ export default async function InventoryPage({ searchParams }: { searchParams: Pr
   const priceMax = p.priceMax ? Number(p.priceMax) : undefined;
 
   const [items, players, rounds] = await Promise.all([
-    prisma.inventoryItem.findMany({ where, include: { card: true, currentOwner: true, originalOpener: true, round: true, auditLogs: { orderBy: { createdAt: 'desc' }, take: 5 } }, orderBy: { createdAt: 'desc' } }),
+    prisma.inventoryItem.findMany({ where, include: { card: true, currentOwner: true, originalOpener: true, round: true, auditLogs: { orderBy: { createdAt: 'desc' }, include: { changedByUser: { include: { player: true } } } } }, orderBy: { createdAt: 'desc' } }),
     prisma.player.findMany({ orderBy: { displayName: 'asc' } }),
     prisma.round.findMany({ orderBy: { startDate: 'desc' } }),
+  ]);
+
+  const auditCardIds = Array.from(new Set(items.flatMap((item) => item.auditLogs.flatMap((audit) => {
+    const beforeJson = audit.beforeJson as Record<string, unknown>;
+    const afterJson = audit.afterJson as Record<string, unknown>;
+    return [beforeJson?.cardId, afterJson?.cardId].filter((value): value is string => typeof value === 'string' && value.length > 0);
+  }))));
+
+  const auditCards = auditCardIds.length
+    ? await prisma.card.findMany({ where: { id: { in: auditCardIds } }, select: { id: true, name: true, setCode: true, collectorNumber: true } })
+    : [];
+
+  const cardLabels = Object.fromEntries([
+    ...items.map((item) => [item.cardId, `${item.card.name} (${item.card.setCode.toUpperCase()}) #${item.card.collectorNumber}`]),
+    ...auditCards.map((card) => [card.id, `${card.name} (${card.setCode.toUpperCase()}) #${card.collectorNumber}`]),
   ]);
 
   async function onSearchPrintings(fd: FormData) {
@@ -153,7 +168,7 @@ export default async function InventoryPage({ searchParams }: { searchParams: Pr
     imageUri: (i.card.imageUris as any)?.normal ?? (i.card.imageUris as any)?.small ?? i.card.imageUri ?? '',
     imageSmall: (i.card.imageUris as any)?.small ?? '',
     scryfallUri: i.card.scryfallUri ?? '',
-    auditHistory: i.auditLogs.map(a => ({ id: a.id, changeType: a.changeType, reason: a.reason ?? '', createdAt: a.createdAt.toISOString() })),
+    auditHistory: i.auditLogs.map(a => ({ id: a.id, changeType: a.changeType, reason: a.reason ?? '', createdAt: a.createdAt.toISOString(), changedBy: a.changedByUser?.player?.displayName ?? a.changedByUser?.username ?? '', beforeJson: a.beforeJson as Record<string, unknown>, afterJson: a.afterJson as Record<string, unknown> })),
   })).filter((row) => {
     if (colorIdentityNeedle) {
       const colorHaystack = row.colorIdentity.toUpperCase();
@@ -190,6 +205,6 @@ export default async function InventoryPage({ searchParams }: { searchParams: Pr
         <div className="col-span-2 flex gap-2"><button className="border px-3">Apply</button><a href="/inventory" className="border px-3 py-2">Clear Filters</a></div>
       </form>
     </details>
-    <InventoryBrowser rows={rows} players={players.map(p => ({ id: p.id, name: p.displayName, color: p.color }))} rounds={rounds.map(r => ({ id: r.id, name: r.name }))} isAdmin={isAdmin} onSaveEdit={onSaveEdit} onSearchPrintings={onSearchPrintings} />
+    <InventoryBrowser rows={rows} players={players.map(p => ({ id: p.id, name: p.displayName, color: p.color }))} rounds={rounds.map(r => ({ id: r.id, name: r.name }))} cardLabels={cardLabels} isAdmin={isAdmin} onSaveEdit={onSaveEdit} onSearchPrintings={onSearchPrintings} />
   </main>;
 }
