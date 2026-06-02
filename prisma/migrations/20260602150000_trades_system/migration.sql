@@ -1,0 +1,58 @@
+DO $$ BEGIN CREATE TYPE "TradingStatus" AS ENUM ('NOT_OPEN', 'OPEN', 'CLOSED'); EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+ALTER TYPE "TradeStatus" ADD VALUE IF NOT EXISTS 'PROPOSED';
+ALTER TYPE "TradeStatus" ADD VALUE IF NOT EXISTS 'ACCEPTED_PENDING_EXCHANGE';
+ALTER TYPE "TradeStatus" ADD VALUE IF NOT EXISTS 'PARTIALLY_COMMITTED';
+ALTER TYPE "TradeStatus" ADD VALUE IF NOT EXISTS 'DECLINED';
+ALTER TYPE "TradeStatus" ADD VALUE IF NOT EXISTS 'CANCELLED';
+
+ALTER TABLE "Round" ADD COLUMN IF NOT EXISTS "tradingEnabled" BOOLEAN NOT NULL DEFAULT false;
+ALTER TABLE "Round" ADD COLUMN IF NOT EXISTS "tradingStatus" "TradingStatus" NOT NULL DEFAULT 'NOT_OPEN';
+ALTER TABLE "Round" ADD COLUMN IF NOT EXISTS "maxTradesPerOpponent" INTEGER NOT NULL DEFAULT 3;
+ALTER TABLE "Round" ADD COLUMN IF NOT EXISTS "allowFutureRoundCards" BOOLEAN NOT NULL DEFAULT false;
+ALTER TABLE "Round" ADD COLUMN IF NOT EXISTS "tradeStructure" TEXT NOT NULL DEFAULT 'EXACTLY_ONE_FOR_ONE';
+
+CREATE TABLE IF NOT EXISTS "Trade" (
+  "id" TEXT NOT NULL,
+  "tradeRoundId" TEXT NOT NULL,
+  "proposerPlayerId" TEXT NOT NULL,
+  "receiverPlayerId" TEXT NOT NULL,
+  "offeredInventoryItemId" TEXT NOT NULL,
+  "requestedInventoryItemId" TEXT NOT NULL,
+  "status" "TradeStatus" NOT NULL DEFAULT 'PROPOSED',
+  "message" TEXT,
+  "proposedAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  "acceptedAt" TIMESTAMP(3),
+  "declinedAt" TIMESTAMP(3),
+  "cancelledAt" TIMESTAMP(3),
+  "proposerCommittedAt" TIMESTAMP(3),
+  "receiverCommittedAt" TIMESTAMP(3),
+  "completedAt" TIMESTAMP(3),
+  "createdByUserId" TEXT,
+  "updatedAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  CONSTRAINT "Trade_pkey" PRIMARY KEY ("id")
+);
+
+CREATE TABLE IF NOT EXISTS "TradeEvent" (
+  "id" TEXT NOT NULL,
+  "tradeId" TEXT NOT NULL,
+  "eventType" TEXT NOT NULL,
+  "actorUserId" TEXT,
+  "actorPlayerId" TEXT,
+  "message" TEXT,
+  "metadataJson" JSONB,
+  "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  CONSTRAINT "TradeEvent_pkey" PRIMARY KEY ("id")
+);
+
+ALTER TABLE "InventoryAuditLog" ADD COLUMN IF NOT EXISTS "tradeId" TEXT;
+
+DO $$ BEGIN ALTER TABLE "Trade" ADD CONSTRAINT "Trade_tradeRoundId_fkey" FOREIGN KEY ("tradeRoundId") REFERENCES "Round"("id") ON DELETE RESTRICT ON UPDATE CASCADE; EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+DO $$ BEGIN ALTER TABLE "Trade" ADD CONSTRAINT "Trade_proposerPlayerId_fkey" FOREIGN KEY ("proposerPlayerId") REFERENCES "Player"("id") ON DELETE RESTRICT ON UPDATE CASCADE; EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+DO $$ BEGIN ALTER TABLE "Trade" ADD CONSTRAINT "Trade_receiverPlayerId_fkey" FOREIGN KEY ("receiverPlayerId") REFERENCES "Player"("id") ON DELETE RESTRICT ON UPDATE CASCADE; EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+DO $$ BEGIN ALTER TABLE "Trade" ADD CONSTRAINT "Trade_offeredInventoryItemId_fkey" FOREIGN KEY ("offeredInventoryItemId") REFERENCES "InventoryItem"("id") ON DELETE RESTRICT ON UPDATE CASCADE; EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+DO $$ BEGIN ALTER TABLE "Trade" ADD CONSTRAINT "Trade_requestedInventoryItemId_fkey" FOREIGN KEY ("requestedInventoryItemId") REFERENCES "InventoryItem"("id") ON DELETE RESTRICT ON UPDATE CASCADE; EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+DO $$ BEGIN ALTER TABLE "Trade" ADD CONSTRAINT "Trade_createdByUserId_fkey" FOREIGN KEY ("createdByUserId") REFERENCES "User"("id") ON DELETE SET NULL ON UPDATE CASCADE; EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+DO $$ BEGIN ALTER TABLE "TradeEvent" ADD CONSTRAINT "TradeEvent_tradeId_fkey" FOREIGN KEY ("tradeId") REFERENCES "Trade"("id") ON DELETE CASCADE ON UPDATE CASCADE; EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+DO $$ BEGIN ALTER TABLE "TradeEvent" ADD CONSTRAINT "TradeEvent_actorUserId_fkey" FOREIGN KEY ("actorUserId") REFERENCES "User"("id") ON DELETE SET NULL ON UPDATE CASCADE; EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+DO $$ BEGIN ALTER TABLE "TradeEvent" ADD CONSTRAINT "TradeEvent_actorPlayerId_fkey" FOREIGN KEY ("actorPlayerId") REFERENCES "Player"("id") ON DELETE SET NULL ON UPDATE CASCADE; EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+DO $$ BEGIN ALTER TABLE "InventoryAuditLog" ADD CONSTRAINT "InventoryAuditLog_tradeId_fkey" FOREIGN KEY ("tradeId") REFERENCES "Trade"("id") ON DELETE SET NULL ON UPDATE CASCADE; EXCEPTION WHEN duplicate_object THEN NULL; END $$;

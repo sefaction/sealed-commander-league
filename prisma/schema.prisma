@@ -9,8 +9,19 @@ datasource db {
 
 enum TradeStatus {
   PENDING
+  PROPOSED
+  ACCEPTED_PENDING_EXCHANGE
+  PARTIALLY_COMMITTED
   COMPLETED
+  DECLINED
+  CANCELLED
   CANCELED
+}
+
+enum TradingStatus {
+  NOT_OPEN
+  OPEN
+  CLOSED
 }
 
 enum RoundStatus {
@@ -56,6 +67,8 @@ model User {
   updatedAt           DateTime @updatedAt
   inventoryAuditLogs  InventoryAuditLog[]
   importBatches       ImportBatch[]
+  createdTrades       Trade[] @relation("TradeCreatedBy")
+  tradeEvents         TradeEvent[]
 }
 
 model League {
@@ -103,6 +116,9 @@ model Player {
   inventoryOpened InventoryItem[]  @relation("InventoryOriginalOpener")
   importBatchesSelected ImportBatch[] @relation("ImportBatchSelectedPlayer")
   importBatchesOriginalOpened ImportBatch[] @relation("ImportBatchOriginalOpener")
+  tradesProposed Trade[] @relation("TradeProposer")
+  tradesReceived Trade[] @relation("TradeReceiver")
+  tradeEvents TradeEvent[]
 }
 
 model LeaguePlayer {
@@ -129,6 +145,12 @@ model Round {
   pulls          Pull[]
   inventoryItems InventoryItem[]
   importBatches ImportBatch[]
+  trades Trade[]
+  tradingEnabled Boolean @default(false)
+  tradingStatus TradingStatus @default(NOT_OPEN)
+  maxTradesPerOpponent Int @default(3)
+  allowFutureRoundCards Boolean @default(false)
+  tradeStructure String @default("EXACTLY_ONE_FOR_ONE")
   createdAt      DateTime @default(now())
   @@unique([seasonId, monthNumber])
 }
@@ -241,6 +263,8 @@ model InventoryItem {
   updatedAt        DateTime @updatedAt
   auditLogs        InventoryAuditLog[]
   importBatchItems ImportBatchItem[]
+  offeredTrades Trade[] @relation("OfferedInventoryItem")
+  requestedTrades Trade[] @relation("RequestedInventoryItem")
 
   @@unique([currentOwnerId, originalOpenerId, cardId, foil, condition, roundId])
 }
@@ -256,6 +280,8 @@ model InventoryAuditLog {
   afterJson       Json
   reason          String?
   createdAt       DateTime @default(now())
+  tradeId         String?
+  trade           Trade?   @relation(fields: [tradeId], references: [id])
 }
 
 model ImportBatch {
@@ -322,6 +348,48 @@ model ImportResolutionAttempt {
   matchedCardPrintingId String?
   candidatesJson        Json?
   errorJson             Json?
+}
+
+model Trade {
+  id                       String @id @default(cuid())
+  tradeRoundId             String
+  tradeRound               Round @relation(fields: [tradeRoundId], references: [id])
+  proposerPlayerId         String
+  proposerPlayer           Player @relation("TradeProposer", fields: [proposerPlayerId], references: [id])
+  receiverPlayerId         String
+  receiverPlayer           Player @relation("TradeReceiver", fields: [receiverPlayerId], references: [id])
+  offeredInventoryItemId   String
+  offeredInventoryItem     InventoryItem @relation("OfferedInventoryItem", fields: [offeredInventoryItemId], references: [id])
+  requestedInventoryItemId String
+  requestedInventoryItem   InventoryItem @relation("RequestedInventoryItem", fields: [requestedInventoryItemId], references: [id])
+  status                   TradeStatus @default(PROPOSED)
+  message                  String?
+  proposedAt               DateTime @default(now())
+  acceptedAt               DateTime?
+  declinedAt               DateTime?
+  cancelledAt              DateTime?
+  proposerCommittedAt      DateTime?
+  receiverCommittedAt      DateTime?
+  completedAt              DateTime?
+  createdByUserId          String?
+  createdByUser            User? @relation("TradeCreatedBy", fields: [createdByUserId], references: [id])
+  updatedAt                DateTime @updatedAt
+  events                   TradeEvent[]
+  inventoryAuditLogs       InventoryAuditLog[]
+}
+
+model TradeEvent {
+  id            String @id @default(cuid())
+  tradeId       String
+  trade         Trade @relation(fields: [tradeId], references: [id])
+  eventType     String
+  actorUserId   String?
+  actorUser     User? @relation(fields: [actorUserId], references: [id])
+  actorPlayerId String?
+  actorPlayer   Player? @relation(fields: [actorPlayerId], references: [id])
+  message       String?
+  metadataJson  Json?
+  createdAt     DateTime @default(now())
 }
 
 model CardOwnership {
