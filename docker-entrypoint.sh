@@ -11,6 +11,7 @@ else
   # Safe no-op when they are not in failed state.
   npx prisma migrate resolve --rolled-back 20260522120000_admin_setup >/dev/null 2>&1 || true
   npx prisma migrate resolve --rolled-back 20260524140000_card_json_column_type_compat >/dev/null 2>&1 || true
+  npx prisma migrate resolve --rolled-back 20260602150000_trades_system >/dev/null 2>&1 || true
   npx prisma migrate deploy
 fi
 

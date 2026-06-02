@@ -77,7 +77,7 @@ export default async function TradesPage({ searchParams }: { searchParams: Promi
     if (!actorIsAdmin && proposerPlayerId !== actor.playerId) throw new Error('Players cannot propose trades for another player.');
     const data = { tradeRoundId: String(fd.get('tradeRoundId') || ''), proposerPlayerId, receiverPlayerId: String(fd.get('receiverPlayerId') || ''), offeredInventoryItemId: String(fd.get('offeredInventoryItemId') || ''), requestedInventoryItemId: String(fd.get('requestedInventoryItemId') || '') };
     await validateProposedTrade(data);
-    await prisma.trade.create({ data: { ...data, message: String(fd.get('message') || '') || null, createdByUserId: actor.id, events: { create: { eventType: 'proposed', actorUserId: actor.id, actorPlayerId: proposerPlayerId, message: 'Trade proposed.' } } } });
+    await prisma.trade.create({ data: { ...data, status: TradeStatus.PROPOSED, message: String(fd.get('message') || '') || null, createdByUserId: actor.id, events: { create: { eventType: 'proposed', actorUserId: actor.id, actorPlayerId: proposerPlayerId, message: 'Trade proposed.' } } } });
     revalidatePath('/trades');
   }
 

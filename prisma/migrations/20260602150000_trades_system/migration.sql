@@ -18,7 +18,7 @@ CREATE TABLE IF NOT EXISTS "Trade" (
   "receiverPlayerId" TEXT NOT NULL,
   "offeredInventoryItemId" TEXT NOT NULL,
   "requestedInventoryItemId" TEXT NOT NULL,
-  "status" "TradeStatus" NOT NULL DEFAULT 'PROPOSED',
+  "status" "TradeStatus" NOT NULL DEFAULT 'PENDING',
   "message" TEXT,
   "proposedAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
   "acceptedAt" TIMESTAMP(3),
