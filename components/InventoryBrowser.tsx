@@ -29,7 +29,7 @@ export type InventoryRow = {
   priceUsdFoil?: string;
   foil: boolean;
   foilStatus?: 'NONFOIL'|'FOIL'|'ETCHED';
-  sourceType?: 'PULL'|'TRADE'|'MANUAL'|'CORRECTION'|'PRIZE'|'OTHER';
+  sourceType?: 'PULL'|'CSV_PULL_IMPORT'|'TRADE'|'MANUAL'|'CORRECTION'|'PRIZE'|'OTHER';
   oracleText?: string;
   powerToughness?: string;
   power?: string;
@@ -125,7 +125,7 @@ export function InventoryBrowser({ rows, players, rounds, cardLabels, isAdmin, o
           <label className="text-sm">Quantity<input name="quantity" type="number" min={1} defaultValue={editing.quantity} className="w-full border p-1 bg-zinc-900"/></label>
           <label className="text-sm">Foil status<select name="foilStatus" defaultValue={editing.foilStatus || 'NONFOIL'} className="w-full border p-1 bg-zinc-900"><option value="NONFOIL">nonfoil</option><option value="FOIL">foil</option><option value="ETCHED">etched</option></select></label>
           <label className="text-sm">Condition<select name="condition" defaultValue={editing.condition || 'NM'} className="w-full border p-1 bg-zinc-900"><option>NM</option><option>LP</option><option>MP</option><option>HP</option><option>DMG</option></select></label>
-          <label className="text-sm">Source type<select name="sourceType" defaultValue={editing.sourceType || 'CORRECTION'} className="w-full border p-1 bg-zinc-900"><option value="PULL">pull</option><option value="TRADE">trade</option><option value="MANUAL">manual</option><option value="CORRECTION">correction</option><option value="PRIZE">prize</option><option value="OTHER">other</option></select></label>
+          <label className="text-sm">Source type<select name="sourceType" defaultValue={editing.sourceType || 'CORRECTION'} className="w-full border p-1 bg-zinc-900"><option value="PULL">pull</option><option value="CSV_PULL_IMPORT">csv pull import</option><option value="TRADE">trade</option><option value="MANUAL">manual</option><option value="CORRECTION">correction</option><option value="PRIZE">prize</option><option value="OTHER">other</option></select></label>
           <label className="text-sm">Reason<input name="reason" required className="w-full border p-1 bg-zinc-900" placeholder="Reason for change"/></label>
         </div>
         <label className="text-sm block">Notes<textarea name="notes" defaultValue={editing.notes || ''} className="w-full border p-1 bg-zinc-900"/></label>

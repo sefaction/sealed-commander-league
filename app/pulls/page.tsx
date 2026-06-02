@@ -123,7 +123,7 @@ export default async function PullsPage({ searchParams }: { searchParams: Promis
     revalidatePath('/pulls');
   }
 
-  return <main className="p-8 space-y-4"><Nav /><h1 className="text-3xl font-bold">Pull Entry</h1>
+  return <main className="p-8 space-y-4"><Nav /><div className="flex items-center gap-3"><h1 className="text-3xl font-bold">Pull Entry</h1><a href="/imports" className="border px-3 py-2 text-sm">Import Pull List</a></div>
     <form method="get" className="flex gap-2 flex-wrap">
       <select name="roundId" defaultValue={roundId} className="border p-2 bg-zinc-900">{rounds.map(r => <option key={r.id} value={r.id}>{r.season.league.name} - {r.name}</option>)}</select>
       <select name="playerId" defaultValue={playerId} className="border p-2 bg-zinc-900">{players.map(p => <option key={p.id} value={p.id}>{p.displayName}</option>)}</select>

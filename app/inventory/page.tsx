@@ -185,6 +185,31 @@ export default async function InventoryPage({ searchParams }: { searchParams: Pr
   });
 
   return <main className="p-8 space-y-4"><Nav /><h1 className="text-3xl font-bold">Inventory Browser</h1>
+    <section className="border border-zinc-800 rounded p-3 space-y-2">
+      <h2 className="font-semibold">Export Inventory</h2>
+      <form action="/api/inventory/export" method="get" className="grid grid-cols-2 md:grid-cols-5 gap-2 items-end">
+        <input type="hidden" name="cardName" value={p.cardName || ''} />
+        <input type="hidden" name="oracleText" value={p.oracleText || ''} />
+        <input type="hidden" name="typeLine" value={p.typeLine || ''} />
+        <input type="hidden" name="originalOpenerId" value={p.originalOpenerId || ''} />
+        <input type="hidden" name="set" value={p.set || ''} />
+        <input type="hidden" name="rarity" value={p.rarity || ''} />
+        <input type="hidden" name="foil" value={p.foil || ''} />
+        <input type="hidden" name="colorIdentity" value={p.colorIdentity || ''} />
+        <input type="hidden" name="manaValueMin" value={p.manaValueMin || ''} />
+        <input type="hidden" name="manaValueMax" value={p.manaValueMax || ''} />
+        <input type="hidden" name="keyword" value={p.keyword || ''} />
+        <input type="hidden" name="priceMin" value={p.priceMin || ''} />
+        <input type="hidden" name="priceMax" value={p.priceMax || ''} />
+        <label className="text-sm">Format<select name="format" className="w-full border p-2 bg-zinc-900"><option value="full">Box League Full CSV</option><option value="moxfield">Moxfield Collection CSV</option></select></label>
+        <label className="text-sm">Scope<select name="scope" defaultValue="my" className="w-full border p-2 bg-zinc-900"><option value="filtered">Current filtered view</option><option value="my">My inventory</option>{isAdmin ? <option value="all">All inventory</option> : null}{isAdmin ? <option value="owner">Selected current owner</option> : null}</select></label>
+        <label className="text-sm">Current owner<select name="ownerId" defaultValue={p.ownerId || userWithPlayer?.playerId || ''} className="w-full border p-2 bg-zinc-900"><option value="">{isAdmin ? 'all owners' : 'my inventory'}</option>{players.map(pl => <option key={pl.id} value={pl.id}>{pl.displayName}</option>)}</select></label>
+        <label className="text-sm">Round<select name="roundId" defaultValue={p.roundId || ''} className="w-full border p-2 bg-zinc-900"><option value="">all rounds</option>{rounds.map(r => <option key={r.id} value={r.id}>{r.name}</option>)}</select></label>
+        <label className="text-sm">Moxfield foil<select name="foilFormat" className="w-full border p-2 bg-zinc-900"><option value="moxfield">foil or blank</option><option value="boolean">true / false</option><option value="text">foil / nonfoil</option></select></label>
+        <div className="col-span-2 md:col-span-5"><button className="border px-3 py-2">Download CSV</button></div>
+      </form>
+      <p className="text-xs text-zinc-400">Exports are generated server-side. Non-admin users are always limited to their own inventory even if a different scope is submitted.</p>
+    </section>
     <details open className="border border-zinc-800 rounded p-3"><summary className="cursor-pointer font-semibold">Advanced Filters</summary>
       <form className="grid grid-cols-2 md:grid-cols-4 gap-2 mt-3">
         <input name="cardName" defaultValue={p.cardName} placeholder="card name contains" className="border p-2 bg-zinc-900" />

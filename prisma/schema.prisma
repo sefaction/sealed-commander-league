@@ -27,6 +27,7 @@ enum FoilStatus {
 
 enum InventorySourceType {
   PULL
+  CSV_PULL_IMPORT
   TRADE
   MANUAL
   CORRECTION
@@ -42,6 +43,7 @@ model User {
   player       Player?  @relation(fields: [playerId], references: [id])
   createdAt    DateTime @default(now())
   inventoryAuditLogs InventoryAuditLog[]
+  importBatches ImportBatch[]
 }
 
 model League {
@@ -87,6 +89,8 @@ model Player {
   pulls           Pull[]
   inventoryOwned  InventoryItem[]  @relation("InventoryCurrentOwner")
   inventoryOpened InventoryItem[]  @relation("InventoryOriginalOpener")
+  importBatchesSelected ImportBatch[] @relation("ImportBatchSelectedPlayer")
+  importBatchesOriginalOpened ImportBatch[] @relation("ImportBatchOriginalOpener")
 }
 
 model LeaguePlayer {
@@ -112,6 +116,7 @@ model Round {
   packAllocations PackAllocation[]
   pulls          Pull[]
   inventoryItems InventoryItem[]
+  importBatches ImportBatch[]
   createdAt      DateTime @default(now())
   @@unique([seasonId, monthNumber])
 }
@@ -181,6 +186,7 @@ model Card {
   ownerships      CardOwnership[]
   pulls           Pull[]
   inventoryItems  InventoryItem[]
+  importBatchItems ImportBatchItem[]
 }
 
 model Pull {
@@ -197,6 +203,7 @@ model Pull {
   notes       String?
   createdAt   DateTime @default(now())
   inventoryItems InventoryItem[]
+  importBatchItems ImportBatchItem[]
 }
 
 model InventoryItem {
@@ -212,6 +219,7 @@ model InventoryItem {
   foilStatus       FoilStatus @default(NONFOIL)
   sourceType       InventorySourceType @default(PULL)
   condition        String
+  language         String   @default("EN")
   acquiredFromPullId String?
   acquiredFromPull Pull?    @relation(fields: [acquiredFromPullId], references: [id])
   roundId          String
@@ -220,6 +228,7 @@ model InventoryItem {
   createdAt        DateTime @default(now())
   updatedAt        DateTime @updatedAt
   auditLogs        InventoryAuditLog[]
+  importBatchItems ImportBatchItem[]
 
   @@unique([currentOwnerId, originalOpenerId, cardId, foil, condition, roundId])
 }
@@ -235,6 +244,47 @@ model InventoryAuditLog {
   afterJson       Json
   reason          String?
   createdAt       DateTime @default(now())
+}
+
+model ImportBatch {
+  id                       String   @id @default(cuid())
+  importType               String
+  filename                 String
+  selectedPlayerId         String
+  selectedPlayer           Player   @relation("ImportBatchSelectedPlayer", fields: [selectedPlayerId], references: [id])
+  selectedOriginalOpenerId String
+  selectedOriginalOpener   Player   @relation("ImportBatchOriginalOpener", fields: [selectedOriginalOpenerId], references: [id])
+  selectedRoundId          String
+  selectedRound            Round    @relation(fields: [selectedRoundId], references: [id])
+  status                   String
+  totalRows                Int      @default(0)
+  matchedRows              Int      @default(0)
+  skippedRows              Int      @default(0)
+  warningRows              Int      @default(0)
+  errorRows                Int      @default(0)
+  createdAt                DateTime @default(now())
+  createdByUserId          String?
+  createdByUser            User?    @relation(fields: [createdByUserId], references: [id])
+  items                    ImportBatchItem[]
+}
+
+model ImportBatchItem {
+  id               String   @id @default(cuid())
+  importBatchId    String
+  importBatch      ImportBatch @relation(fields: [importBatchId], references: [id])
+  rowNumber        Int
+  rawRowJson       Json
+  parsedRowJson    Json
+  status           String
+  message          String?
+  inventoryItemId  String?
+  inventoryItem    InventoryItem? @relation(fields: [inventoryItemId], references: [id])
+  pullId           String?
+  pull             Pull? @relation(fields: [pullId], references: [id])
+  cardPrintingId   String?
+  cardPrinting     Card? @relation(fields: [cardPrintingId], references: [id])
+  parsedFoilStatus String?
+  parsedCondition  String?
 }
 
 model CardOwnership {
