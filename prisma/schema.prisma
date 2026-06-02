@@ -271,8 +271,8 @@ model InventoryItem {
 
 model InventoryAuditLog {
   id              String   @id @default(cuid())
-  inventoryItemId String
-  inventoryItem   InventoryItem @relation(fields: [inventoryItemId], references: [id])
+  inventoryItemId String?
+  inventoryItem   InventoryItem? @relation(fields: [inventoryItemId], references: [id])
   changedByUserId String?
   changedByUser   User?    @relation(fields: [changedByUserId], references: [id])
   changeType      String
@@ -358,10 +358,12 @@ model Trade {
   proposerPlayer           Player @relation("TradeProposer", fields: [proposerPlayerId], references: [id])
   receiverPlayerId         String
   receiverPlayer           Player @relation("TradeReceiver", fields: [receiverPlayerId], references: [id])
-  offeredInventoryItemId   String
-  offeredInventoryItem     InventoryItem @relation("OfferedInventoryItem", fields: [offeredInventoryItemId], references: [id])
-  requestedInventoryItemId String
-  requestedInventoryItem   InventoryItem @relation("RequestedInventoryItem", fields: [requestedInventoryItemId], references: [id])
+  offeredInventoryItemId   String?
+  offeredInventoryItem     InventoryItem? @relation("OfferedInventoryItem", fields: [offeredInventoryItemId], references: [id])
+  offeredSnapshotJson      Json?
+  requestedInventoryItemId String?
+  requestedInventoryItem   InventoryItem? @relation("RequestedInventoryItem", fields: [requestedInventoryItemId], references: [id])
+  requestedSnapshotJson    Json?
   status                   TradeStatus @default(PROPOSED)
   message                  String?
   proposedAt               DateTime @default(now())

@@ -58,7 +58,7 @@ export async function GET(request: NextRequest) {
     return new Response('Not authorized to export that inventory.', { status: 403 });
   }
 
-  const where: any = {};
+  const where: any = { quantity: { gt: 0 } };
   if (!isAdmin) {
     where.currentOwnerId = signedInPlayerId;
   } else if (scope === 'my' && signedInPlayerId) {

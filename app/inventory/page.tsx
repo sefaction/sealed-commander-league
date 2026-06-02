@@ -6,6 +6,7 @@ import { InventoryBrowser } from '@/components/InventoryBrowser';
 import { FoilStatus, InventorySourceType } from '@prisma/client';
 import { searchCards, getCardByScryfallId } from '@/lib/scryfall';
 import { revalidatePath } from 'next/cache';
+import { cleanupZeroQuantityInventory, deleteInventoryItem } from './actions';
 
 export default async function InventoryPage({ searchParams }: { searchParams: Promise<Record<string, string | undefined>> }) {
   const user = await getCurrentUser();
@@ -13,7 +14,7 @@ export default async function InventoryPage({ searchParams }: { searchParams: Pr
   const isAdmin = isAdminUser(user, user?.player);
 
   const p = await searchParams;
-  const where: any = {};
+  const where: any = { quantity: { gt: 0 } };
   if (p.cardName) where.card = { ...(where.card || {}), name: { contains: p.cardName, mode: 'insensitive' } };
   if (p.oracleText) where.card = { ...(where.card || {}), oracleText: { contains: p.oracleText, mode: 'insensitive' } };
   if (p.typeLine) where.card = { ...(where.card || {}), typeLine: { contains: p.typeLine, mode: 'insensitive' } };
@@ -30,10 +31,11 @@ export default async function InventoryPage({ searchParams }: { searchParams: Pr
   const priceMin = p.priceMin ? Number(p.priceMin) : undefined;
   const priceMax = p.priceMax ? Number(p.priceMax) : undefined;
 
-  const [items, players, rounds] = await Promise.all([
+  const [items, players, rounds, zeroQuantityCount] = await Promise.all([
     prisma.inventoryItem.findMany({ where, include: { card: true, currentOwner: true, originalOpener: true, round: true, auditLogs: { orderBy: { createdAt: 'desc' }, include: { changedByUser: { include: { player: true } } } } }, orderBy: { createdAt: 'desc' } }),
     prisma.player.findMany({ orderBy: { displayName: 'asc' } }),
     prisma.round.findMany({ orderBy: { startDate: 'desc' } }),
+    isAdmin ? prisma.inventoryItem.count({ where: { quantity: { lte: 0 } } }) : Promise.resolve(0),
   ]);
 
   const auditCardIds = Array.from(new Set(items.flatMap((item) => item.auditLogs.flatMap((audit) => {
@@ -210,6 +212,14 @@ export default async function InventoryPage({ searchParams }: { searchParams: Pr
       </form>
       <p className="text-xs text-zinc-400">Exports are generated server-side. Non-admin users are always limited to their own inventory even if a different scope is submitted.</p>
     </section> : <p className="rounded border border-zinc-800 p-3 text-sm text-zinc-400">Guest mode is read-only. Log in to export inventory or make changes.</p>}
+    {isAdmin ? <section className="border border-zinc-800 rounded p-3 space-y-2">
+      <h2 className="font-semibold">Inventory Maintenance</h2>
+      <p className="text-sm text-zinc-400">Zero-quantity rows are hidden from inventory. Current zero-quantity rows: {zeroQuantityCount}.</p>
+      <form action={cleanupZeroQuantityInventory} className="flex flex-wrap gap-2 items-end">
+        <label className="text-sm flex-1 min-w-64">Cleanup reason<input name="reason" defaultValue="Admin cleanup of zero-quantity inventory items." className="w-full border p-2 bg-zinc-900" /></label>
+        <button className="border px-3 py-2" disabled={zeroQuantityCount === 0}>Clean up zero-quantity inventory items</button>
+      </form>
+    </section> : null}
     <details open className="border border-zinc-800 rounded p-3"><summary className="cursor-pointer font-semibold">Advanced Filters</summary>
       <form className="grid grid-cols-2 md:grid-cols-4 gap-2 mt-3">
         <input name="cardName" defaultValue={p.cardName} placeholder="card name contains" className="border p-2 bg-zinc-900" />
@@ -230,6 +240,6 @@ export default async function InventoryPage({ searchParams }: { searchParams: Pr
         <div className="col-span-2 flex gap-2"><button className="border px-3">Apply</button><a href="/inventory" className="border px-3 py-2">Clear Filters</a></div>
       </form>
     </details>
-    <InventoryBrowser rows={rows} players={players.map(p => ({ id: p.id, name: p.displayName, color: p.color }))} rounds={rounds.map(r => ({ id: r.id, name: r.name }))} cardLabels={cardLabels} isAdmin={isAdmin} onSaveEdit={onSaveEdit} onSearchPrintings={onSearchPrintings} />
+    <InventoryBrowser rows={rows} players={players.map(p => ({ id: p.id, name: p.displayName, color: p.color }))} rounds={rounds.map(r => ({ id: r.id, name: r.name }))} cardLabels={cardLabels} isAdmin={isAdmin} onSaveEdit={onSaveEdit} onSearchPrintings={onSearchPrintings} onDeleteInventoryItem={deleteInventoryItem} />
   </main>;
 }

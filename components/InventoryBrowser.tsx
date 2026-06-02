@@ -75,7 +75,7 @@ function CardDetail({ row, onClose, isAdmin, onEdit, onAudit }: { row: Inventory
       </div></div></div></div>;
 }
 
-export function InventoryBrowser({ rows, players, rounds, cardLabels, isAdmin, onSaveEdit, onSearchPrintings }: { rows: InventoryRow[]; players: PickRef[]; rounds: PickRef[]; cardLabels: Record<string, string>; isAdmin: boolean; onSaveEdit: (formData: FormData) => Promise<void>; onSearchPrintings: (formData: FormData) => Promise<ScryfallResult[]>; }) {
+export function InventoryBrowser({ rows, players, rounds, cardLabels, isAdmin, onSaveEdit, onSearchPrintings, onDeleteInventoryItem }: { rows: InventoryRow[]; players: PickRef[]; rounds: PickRef[]; cardLabels: Record<string, string>; isAdmin: boolean; onSaveEdit: (formData: FormData) => Promise<void>; onSearchPrintings: (formData: FormData) => Promise<ScryfallResult[]>; onDeleteInventoryItem?: (formData: FormData) => Promise<void>; }) {
   const [sorting, setSorting] = useState<SortingState>([]);
   const [selected, setSelected] = useState<InventoryRow | null>(null);
   const [editing, setEditing] = useState<InventoryRow | null>(null);
@@ -138,6 +138,23 @@ export function InventoryBrowser({ rows, players, rounds, cardLabels, isAdmin, o
         </div>
         <div className="flex gap-2 justify-end"><button type="button" className="border px-3" onClick={() => setEditing(null)}>Cancel</button><button className="border px-3">Save Changes</button></div>
       </form>
+      {onDeleteInventoryItem ? <details className="mt-4 rounded border border-red-900/70 bg-red-950/20 p-3 text-sm">
+        <summary className="cursor-pointer font-semibold text-red-200">Delete Inventory Item</summary>
+        <div className="mt-3 space-y-3">
+          <p className="text-red-100">This removes <b>{editing.cardName}</b> from active inventory for <b>{editing.currentOwner}</b>.</p>
+          <div className="grid md:grid-cols-2 gap-2 text-zinc-300">
+            <div>Quantity: {editing.quantity}</div><div>Set: {editing.setCode} #{editing.collectorNumber || '-'}</div><div>Foil: {editing.foilStatus || (editing.foil ? 'FOIL' : 'NONFOIL')}</div><div>Condition: {editing.condition || '-'}</div>
+          </div>
+          <form action={async (fd) => {
+            try { await onDeleteInventoryItem(fd); setMessage('Inventory item deleted.'); setEditing(null); }
+            catch (e: any) { setMessage(e?.message || 'Failed to delete inventory item.'); }
+          }} className="space-y-2">
+            <input type="hidden" name="inventoryItemId" value={editing.id} />
+            <label className="block">Delete reason<input name="deleteReason" required className="mt-1 w-full border p-2 bg-zinc-900" placeholder="Reason for deleting this inventory item" /></label>
+            <button className="border border-red-700 px-3 py-2 text-red-100">Confirm Delete Inventory Item</button>
+          </form>
+        </div>
+      </details> : null}
     </div></div> : null}
   </div>;
 }
