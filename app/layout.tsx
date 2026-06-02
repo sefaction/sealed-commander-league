@@ -1,0 +1,11 @@
+import './globals.css';
+import type { ReactNode } from 'react';
+
+export const metadata = {
+  title: process.env.NEXT_PUBLIC_APP_NAME || 'Box League',
+  description: 'Sealed commander league tracker',
+};
+
+export default function RootLayout({ children }: { children: ReactNode }) {
+  return <html lang="en"><body>{children}</body></html>;
+}
