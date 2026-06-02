@@ -1,9 +1,8 @@
-import { requireAuth } from '@/lib/auth';
+export const dynamic = 'force-dynamic';
 import { Nav } from '@/components/Nav';
 import { prisma } from '@/lib/prisma';
 
 export default async function Page() {
-  await requireAuth();
   const players = await prisma.player.findMany({ orderBy: { displayName: 'asc' } });
 
   return (

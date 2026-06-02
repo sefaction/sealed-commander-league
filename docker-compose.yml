@@ -21,7 +21,7 @@ services:
     environment:
       DATABASE_URL: ${DATABASE_URL:-postgresql://boxleague:boxleague@postgres:5432/boxleague?schema=public}
       NEXT_PUBLIC_APP_NAME: ${NEXT_PUBLIC_APP_NAME:-Box League}
-      SEED_ADMIN_PASSWORD: ${SEED_ADMIN_PASSWORD:-boxleague123}
+      SEED_ADMIN_PASSWORD: ${SEED_ADMIN_PASSWORD:-admin123}
       NODE_ENV: production
     depends_on:
       - postgres

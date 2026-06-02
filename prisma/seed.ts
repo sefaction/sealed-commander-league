@@ -1,4 +1,4 @@
-import { PrismaClient, RoundStatus } from '@prisma/client';
+import { PrismaClient, RoundStatus, UserRole } from '@prisma/client';
 import bcrypt from 'bcryptjs';
 
 const prisma = new PrismaClient();
@@ -99,12 +99,23 @@ async function main() {
     });
   }
 
-  const adminHash = await bcrypt.hash(process.env.SEED_ADMIN_PASSWORD || 'boxleague123', 10);
+  const adminHash = await bcrypt.hash(process.env.SEED_ADMIN_PASSWORD || 'admin123', 12);
   await prisma.user.upsert({
     where: { username: 'admin' },
-    update: { passwordHash: adminHash, playerId: players[0].id },
-    create: { username: 'admin', passwordHash: adminHash, playerId: players[0].id },
+    update: { passwordHash: adminHash, playerId: players[0].id, displayName: 'Administrator', role: UserRole.ADMIN, forcePasswordChange: true, isActive: true },
+    create: { username: 'admin', passwordHash: adminHash, playerId: players[0].id, displayName: 'Administrator', role: UserRole.ADMIN, forcePasswordChange: true, isActive: true },
   });
+
+
+  const sampleUserPassword = await bcrypt.hash('player123', 12);
+  for (const player of players) {
+    if (player.name === 'brian') continue;
+    await prisma.user.upsert({
+      where: { username: player.name.replace(/-/g, '') },
+      update: { displayName: player.displayName, playerId: player.id, role: UserRole.PLAYER, isActive: true },
+      create: { username: player.name.replace(/-/g, ''), passwordHash: sampleUserPassword, displayName: player.displayName, playerId: player.id, role: UserRole.PLAYER, forcePasswordChange: true, isActive: true },
+    });
+  }
 }
 
 main().finally(async () => prisma.$disconnect());

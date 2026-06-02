@@ -7,7 +7,7 @@ Dockerized Next.js app for tracking a long-form MTG sealed commander league.
 - PostgreSQL + Prisma
 - Tailwind CSS
 - Docker Compose
-- Local username/password auth
+- Local username/password auth with guest read-only browsing and admin-managed user accounts
 
 ## Unraid-first Quick Start
 1. Copy `.env.example` to `.env` and set values.
@@ -26,7 +26,9 @@ Dockerized Next.js app for tracking a long-form MTG sealed commander league.
    - `http://192.168.1.2:13001` (or `http://<your-unraid-ip>:<WEB_HOST_PORT>`)
 7. Login with:
    - username: `admin`
-   - password: value of `SEED_ADMIN_PASSWORD`
+   - password: value of `SEED_ADMIN_PASSWORD` (defaults to `admin123` in seed/bootstrap scripts if not overridden)
+
+The seeded admin password is temporary. Change it immediately after first login; seeded/admin-created accounts may be forced through the Change Password page before accessing protected tools.
 
 ## Environment variables
 See `.env.example` for all settings. Important ones:

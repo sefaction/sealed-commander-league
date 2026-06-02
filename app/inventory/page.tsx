@@ -1,4 +1,5 @@
-import { requireAuth } from '@/lib/auth';
+export const dynamic = 'force-dynamic';
+import { getCurrentUser, isAdminUser, requireAdmin } from '@/lib/auth';
 import { Nav } from '@/components/Nav';
 import { prisma } from '@/lib/prisma';
 import { InventoryBrowser } from '@/components/InventoryBrowser';
@@ -7,10 +8,9 @@ import { searchCards, getCardByScryfallId } from '@/lib/scryfall';
 import { revalidatePath } from 'next/cache';
 
 export default async function InventoryPage({ searchParams }: { searchParams: Promise<Record<string, string | undefined>> }) {
-  const user = await requireAuth();
-  const userWithPlayer = await prisma.user.findUnique({ where: { id: user.id }, include: { player: true } });
-  const adminUsername = process.env.ADMIN_USERNAME || 'admin';
-  const isAdmin = user.username === adminUsername || Boolean(userWithPlayer?.player?.isAdmin);
+  const user = await getCurrentUser();
+  const userWithPlayer = user;
+  const isAdmin = isAdminUser(user, user?.player);
 
   const p = await searchParams;
   const where: any = {};
@@ -53,7 +53,7 @@ export default async function InventoryPage({ searchParams }: { searchParams: Pr
 
   async function onSearchPrintings(fd: FormData) {
     'use server';
-    if (!isAdmin) throw new Error('Not authorized');
+    await requireAdmin();
     const q = String(fd.get('q') || '');
     const r = await searchCards(q);
     return r.slice(0, 20).map((c) => ({ id: c.id, name: c.name, set: c.set, set_name: c.set_name, collector_number: c.collector_number, rarity: c.rarity, image_uris: c.image_uris }));
@@ -61,7 +61,7 @@ export default async function InventoryPage({ searchParams }: { searchParams: Pr
 
   async function onSaveEdit(fd: FormData) {
     'use server';
-    if (!isAdmin) throw new Error('Not authorized');
+    const actionUser = await requireAdmin();
     const inventoryItemId = String(fd.get('inventoryItemId') || '');
     const quantity = Number(fd.get('quantity'));
     if (!Number.isInteger(quantity) || quantity <= 0) throw new Error('Quantity must be a positive integer');
@@ -114,7 +114,7 @@ export default async function InventoryPage({ searchParams }: { searchParams: Pr
 
     await prisma.inventoryAuditLog.create({ data: {
       inventoryItemId: updated.id,
-      changedByUserId: user.id,
+      changedByUserId: actionUser.id,
       changeType: newScryfallId ? 'printing_correction' : 'manual_edit',
       beforeJson: before as any,
       afterJson: updated as any,
@@ -185,7 +185,7 @@ export default async function InventoryPage({ searchParams }: { searchParams: Pr
   });
 
   return <main className="p-8 space-y-4"><Nav /><h1 className="text-3xl font-bold">Inventory Browser</h1>
-    <section className="border border-zinc-800 rounded p-3 space-y-2">
+    {user ? <section className="border border-zinc-800 rounded p-3 space-y-2">
       <h2 className="font-semibold">Export Inventory</h2>
       <form action="/api/inventory/export" method="get" className="grid grid-cols-2 md:grid-cols-5 gap-2 items-end">
         <input type="hidden" name="cardName" value={p.cardName || ''} />
@@ -209,7 +209,7 @@ export default async function InventoryPage({ searchParams }: { searchParams: Pr
         <div className="col-span-2 md:col-span-5"><button className="border px-3 py-2">Download CSV</button></div>
       </form>
       <p className="text-xs text-zinc-400">Exports are generated server-side. Non-admin users are always limited to their own inventory even if a different scope is submitted.</p>
-    </section>
+    </section> : <p className="rounded border border-zinc-800 p-3 text-sm text-zinc-400">Guest mode is read-only. Log in to export inventory or make changes.</p>}
     <details open className="border border-zinc-800 rounded p-3"><summary className="cursor-pointer font-semibold">Advanced Filters</summary>
       <form className="grid grid-cols-2 md:grid-cols-4 gap-2 mt-3">
         <input name="cardName" defaultValue={p.cardName} placeholder="card name contains" className="border p-2 bg-zinc-900" />

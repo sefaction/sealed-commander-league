@@ -1,9 +1,10 @@
+export const dynamic = 'force-dynamic';
 import Papa from 'papaparse';
 import { redirect } from 'next/navigation';
 import { revalidatePath } from 'next/cache';
 import { FoilStatus, InventorySourceType } from '@prisma/client';
 import { Nav } from '@/components/Nav';
-import { requireAuth } from '@/lib/auth';
+import { isAdminUser, requireLogin as requireAuth } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
 import { findOrImportCard, normalizeCollectorNumber, normalizeSetCode, upsertScryfallCard } from '@/lib/card-import';
 import { getCardByScryfallId, searchCards } from '@/lib/scryfall';
@@ -100,9 +101,6 @@ function parseRow(row: Record<string, string>, rowNumber: number): ParsedRow {
     warning: foil.warning || undefined,
     error: errors.length ? `Row ${rowNumber}: ${errors.join(' ')}` : undefined,
   };
-}
-function isAdminUser(user: { username: string }, player?: { isAdmin: boolean } | null) {
-  return user.username === (process.env.ADMIN_USERNAME || 'admin') || Boolean(player?.isAdmin);
 }
 function jsonSafe<T>(value: T): T { return JSON.parse(JSON.stringify(value)); }
 function cardImage(card?: { imageUri?: string | null; imageUris?: unknown } | null) {

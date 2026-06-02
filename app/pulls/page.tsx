@@ -1,4 +1,5 @@
-import { requireAuth } from '@/lib/auth';
+export const dynamic = 'force-dynamic';
+import { canImportForPlayer, isAdminUser, requireLogin as requireAuth } from '@/lib/auth';
 import { Nav } from '@/components/Nav';
 import { prisma } from '@/lib/prisma';
 import { FoilStatus, InventorySourceType } from '@prisma/client';
@@ -6,13 +7,14 @@ import { searchCards } from '@/lib/scryfall';
 import { revalidatePath } from 'next/cache';
 
 export default async function PullsPage({ searchParams }: { searchParams: Promise<{ roundId?: string; playerId?: string; q?: string }> }) {
-  await requireAuth();
+  const user = await requireAuth();
+  const isAdmin = isAdminUser(user, user.player);
   const params = await searchParams;
   const rounds = await prisma.round.findMany({ include: { season: { include: { league: true } } }, orderBy: { startDate: 'desc' } });
   const players = await prisma.player.findMany({ where: { active: true }, orderBy: { displayName: 'asc' } });
 
   const roundId = params.roundId ?? rounds[0]?.id;
-  const playerId = params.playerId ?? players[0]?.id;
+  const playerId = isAdmin ? (params.playerId ?? players[0]?.id) : (user.playerId ?? players[0]?.id);
 
   const allocation = roundId && playerId ? await prisma.packAllocation.findUnique({ where: { roundId_playerId: { roundId, playerId } } }) : null;
   const q = params.q ?? '';
@@ -21,7 +23,10 @@ export default async function PullsPage({ searchParams }: { searchParams: Promis
   async function savePull(fd: FormData) {
     'use server';
     const roundId = String(fd.get('roundId'));
-    const playerId = String(fd.get('playerId'));
+    const actionUser = await requireAuth();
+    const submittedPlayerId = String(fd.get('playerId'));
+    const playerId = canImportForPlayer(actionUser, submittedPlayerId) ? submittedPlayerId : (actionUser.playerId || submittedPlayerId);
+    if (!canImportForPlayer(actionUser, playerId)) throw new Error('Not authorized to enter pulls for that player.');
     const scryfallId = String(fd.get('scryfallId'));
     const quantity = Number(fd.get('quantity'));
     const foil = fd.get('foil') === 'on';
@@ -126,7 +131,7 @@ export default async function PullsPage({ searchParams }: { searchParams: Promis
   return <main className="p-8 space-y-4"><Nav /><div className="flex items-center gap-3"><h1 className="text-3xl font-bold">Pull Entry</h1><a href="/imports" className="border px-3 py-2 text-sm">Import Pull List</a></div>
     <form method="get" className="flex gap-2 flex-wrap">
       <select name="roundId" defaultValue={roundId} className="border p-2 bg-zinc-900">{rounds.map(r => <option key={r.id} value={r.id}>{r.season.league.name} - {r.name}</option>)}</select>
-      <select name="playerId" defaultValue={playerId} className="border p-2 bg-zinc-900">{players.map(p => <option key={p.id} value={p.id}>{p.displayName}</option>)}</select>
+      {isAdmin ? <select name="playerId" defaultValue={playerId} className="border p-2 bg-zinc-900">{players.map(p => <option key={p.id} value={p.id}>{p.displayName}</option>)}</select> : <><input type="hidden" name="playerId" value={playerId} /><span className="border border-zinc-800 p-2 text-sm">Entering pulls for {user.player?.displayName || 'your player'}</span></>}
       <input name="q" placeholder="Search Scryfall" defaultValue={q} className="border p-2 bg-zinc-900" />
       <button className="border px-3">Load</button>
     </form>

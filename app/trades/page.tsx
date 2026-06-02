@@ -1,4 +1,5 @@
-import { requireAuth } from '@/lib/auth';
+export const dynamic = 'force-dynamic';
+import { requireLogin as requireAuth } from '@/lib/auth';
 import { Nav } from '@/components/Nav';
 
 export default async function Page() {

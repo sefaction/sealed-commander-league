@@ -1,9 +1,8 @@
-import { requireAuth } from '@/lib/auth';
+export const dynamic = 'force-dynamic';
 import { Nav } from '@/components/Nav';
 import { prisma } from '@/lib/prisma';
 
 export default async function Page() {
-  await requireAuth();
   const [players, cards, rounds, pointEvents] = await Promise.all([
     prisma.player.count(),
     prisma.card.count(),

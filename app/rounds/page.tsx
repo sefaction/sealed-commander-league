@@ -1,9 +1,8 @@
-import { requireAuth } from '@/lib/auth';
+export const dynamic = 'force-dynamic';
 import { Nav } from '@/components/Nav';
 import { prisma } from '@/lib/prisma';
 
 export default async function Page() {
-  await requireAuth();
   const rounds = await prisma.round.findMany({
     orderBy: [{ monthNumber: 'desc' }],
     include: { season: { include: { league: true } } },

@@ -1,6 +1,6 @@
 import { NextRequest } from 'next/server';
 import { prisma } from '@/lib/prisma';
-import { requireAuth } from '@/lib/auth';
+import { canExportInventory, isAdminUser, requireLogin } from '@/lib/auth';
 
 function csvEscape(value: unknown) {
   const text = value === null || value === undefined ? '' : String(value);
@@ -38,11 +38,10 @@ function safeFilenamePart(value: string) {
 }
 
 export async function GET(request: NextRequest) {
-  const user = await requireAuth();
-  const userWithPlayer = await prisma.user.findUnique({ where: { id: user.id }, include: { player: true } });
-  const adminUsername = process.env.ADMIN_USERNAME || 'admin';
-  const isAdmin = user.username === adminUsername || Boolean(userWithPlayer?.player?.isAdmin);
-  const signedInPlayerId = userWithPlayer?.playerId;
+  const user = await requireLogin();
+  const userWithPlayer = user;
+  const isAdmin = isAdminUser(user, user.player);
+  const signedInPlayerId = user.playerId;
 
   if (!signedInPlayerId && !isAdmin) {
     return new Response('Your login is not linked to a player, so there is no inventory to export.', { status: 403 });
@@ -54,6 +53,10 @@ export async function GET(request: NextRequest) {
   const ownerId = params.get('ownerId') || '';
   const roundId = params.get('roundId') || '';
   const foilFormat = params.get('foilFormat') || 'moxfield';
+
+  if (!canExportInventory(user, ownerId || signedInPlayerId)) {
+    return new Response('Not authorized to export that inventory.', { status: 403 });
+  }
 
   const where: any = {};
   if (!isAdmin) {

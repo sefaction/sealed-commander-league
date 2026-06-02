@@ -35,15 +35,27 @@ enum InventorySourceType {
   OTHER
 }
 
+enum UserRole {
+  PLAYER
+  ADMIN
+}
+
 model User {
-  id           String   @id @default(cuid())
-  username     String   @unique
-  passwordHash String
-  playerId     String?
-  player       Player?  @relation(fields: [playerId], references: [id])
-  createdAt    DateTime @default(now())
-  inventoryAuditLogs InventoryAuditLog[]
-  importBatches ImportBatch[]
+  id                  String   @id @default(cuid())
+  username            String   @unique
+  email               String?  @unique
+  displayName         String
+  passwordHash        String
+  role                UserRole @default(PLAYER)
+  playerId            String?
+  player              Player?  @relation(fields: [playerId], references: [id])
+  forcePasswordChange Boolean  @default(false)
+  isActive            Boolean  @default(true)
+  lastLoginAt         DateTime?
+  createdAt           DateTime @default(now())
+  updatedAt           DateTime @updatedAt
+  inventoryAuditLogs  InventoryAuditLog[]
+  importBatches       ImportBatch[]
 }
 
 model League {
