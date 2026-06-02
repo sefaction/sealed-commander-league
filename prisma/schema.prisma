@@ -285,6 +285,31 @@ model ImportBatchItem {
   cardPrinting     Card? @relation(fields: [cardPrintingId], references: [id])
   parsedFoilStatus String?
   parsedCondition  String?
+  quantityImported Int?
+  duplicateBehaviorUsed String?
+  createdNewInventoryItem Boolean?
+  updatedExistingInventoryItem Boolean?
+  beforeQuantity Int?
+  afterQuantity Int?
+  resolutionAttempts ImportResolutionAttempt[]
+}
+
+model ImportResolutionAttempt {
+  id                    String   @id @default(cuid())
+  importBatchItemId     String
+  importBatchItem       ImportBatchItem @relation(fields: [importBatchItemId], references: [id])
+  attemptedAt           DateTime @default(now())
+  mode                  String
+  previousStatus        String
+  newStatus             String
+  resolutionMethod      String
+  confidence            String
+  queryUsed             String?
+  message               String?
+  matchedScryfallId     String?
+  matchedCardPrintingId String?
+  candidatesJson        Json?
+  errorJson             Json?
 }
 
 model CardOwnership {
