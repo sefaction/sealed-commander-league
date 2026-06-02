@@ -15,7 +15,7 @@ const aliases: Record<string, string[]> = {
   foil: ['foil', 'foil status', 'finish'],
   condition: ['condition'],
   language: ['language', 'lang'],
-  notes: ['notes', 'comment'],
+  notes: ['notes', 'comment', 'tag', 'tags'],
   scryfallId: ['scryfall id', 'scryfallid', 'scryfall_id'],
 };
 
@@ -46,14 +46,57 @@ function parseFoil(value: string) {
   if (['etched', 'etched foil', 'foil etched'].includes(v)) return { status: FoilStatus.ETCHED, warning: '' };
   return { status: FoilStatus.NONFOIL, warning: `Invalid foil value "${value}"; defaulted to NONFOIL.` };
 }
+function parseCondition(value: string) {
+  const v = norm(value);
+  if (!v) return 'NM';
+  const map: Record<string, string> = {
+    nm: 'NM',
+    'near mint': 'NM',
+    nearmint: 'NM',
+    lp: 'LP',
+    'lightly played': 'LP',
+    lightlyplayed: 'LP',
+    sp: 'LP',
+    'slightly played': 'LP',
+    mp: 'MP',
+    'moderately played': 'MP',
+    moderatelyplayed: 'MP',
+    hp: 'HP',
+    'heavily played': 'HP',
+    heavilyplayed: 'HP',
+    dmg: 'DMG',
+    damaged: 'DMG',
+    poor: 'DMG',
+  };
+  return map[v] ?? value.trim().toUpperCase();
+}
+function parseLanguage(value: string) {
+  const v = norm(value);
+  if (!v) return 'EN';
+  const map: Record<string, string> = {
+    en: 'EN', english: 'EN',
+    ja: 'JA', japanese: 'JA',
+    de: 'DE', german: 'DE',
+    fr: 'FR', french: 'FR',
+    es: 'ES', spanish: 'ES',
+    it: 'IT', italian: 'IT',
+    pt: 'PT', portuguese: 'PT',
+    ru: 'RU', russian: 'RU',
+    ko: 'KO', korean: 'KO',
+    'zhs': 'ZHS', 'simplified chinese': 'ZHS',
+    'zht': 'ZHT', 'traditional chinese': 'ZHT',
+  };
+  return map[v] ?? value.trim().toUpperCase();
+}
 function parseRow(row: Record<string, string>, rowNumber: number): ParsedRow & { error?: string } {
   const quantityRaw = getCell(row, 'quantity');
   const quantity = Number(quantityRaw || '0');
   const name = getCell(row, 'name');
   const foilRaw = getCell(row, 'foil');
   const foil = parseFoil(foilRaw);
-  const condition = getCell(row, 'condition') || 'NM';
-  const language = (getCell(row, 'language') || 'EN').toUpperCase();
+  const conditionRaw = getCell(row, 'condition');
+  const condition = parseCondition(conditionRaw);
+  const language = parseLanguage(getCell(row, 'language'));
   const errors = [];
   if (!Number.isInteger(quantity) || quantity <= 0) errors.push('Quantity must be a positive integer.');
   if (!name) errors.push('Name is required.');
@@ -173,6 +216,7 @@ export default async function ImportsPage({ searchParams }: { searchParams: Prom
 
   return <main className="p-8 space-y-6"><Nav /><div className="flex items-center justify-between gap-3"><h1 className="text-3xl font-bold">Imports</h1><a className="border px-3 py-2" href="/api/imports/sample">Download sample pull import CSV</a></div>
     <section className="border border-zinc-800 rounded p-4 space-y-3"><h2 className="text-xl font-semibold">Pull CSV Import</h2>
+      <p className="text-sm text-zinc-400">Accepts the Box League sample columns or Moxfield collection exports with Count, Name, Edition, Condition, Language, Foil, and Collector Number columns.</p>
       {!isAdmin && defaultPlayer ? <p className="text-sm text-zinc-300">Importing pulls for: <strong>{defaultPlayer.displayName}</strong></p> : null}
       <form action={previewImport} className="grid md:grid-cols-2 gap-3" encType="multipart/form-data">
         {isAdmin ? <><label className="text-sm">Current owner<select name="selectedPlayerId" defaultValue={defaultPlayer?.id} className="w-full border p-2 bg-zinc-900">{players.map(p => <option key={p.id} value={p.id}>{p.displayName}</option>)}</select></label><label className="text-sm">Original opener<select name="selectedOriginalOpenerId" defaultValue={defaultPlayer?.id} className="w-full border p-2 bg-zinc-900">{players.map(p => <option key={p.id} value={p.id}>{p.displayName}</option>)}</select></label></> : <><input type="hidden" name="selectedPlayerId" value={defaultPlayer?.id ?? ''} /><input type="hidden" name="selectedOriginalOpenerId" value={defaultPlayer?.id ?? ''} /></>}
